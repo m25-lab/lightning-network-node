@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.9
-// source: service-tx.proto
+// source: tx.proto
 
 package pb
 
@@ -57,9 +57,9 @@ func RegisterTxServiceServer(s grpc.ServiceRegistrar, srv TxServiceServer) {
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var TxService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.TxService",
+	ServiceName: "TxService",
 	HandlerType: (*TxServiceServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams:     []grpc.StreamDesc{},
-	Metadata:    "service-tx.proto",
+	Metadata:    "tx.proto",
 }

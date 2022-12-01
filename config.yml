@@ -1,0 +1,5 @@
+database:
+  host: "cluster0.gkboq8o.mongodb.net"
+  user: "admin"
+  password: "8dEEFgSldfSerTHO"
+  timeout: 10

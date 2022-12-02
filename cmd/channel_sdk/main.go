@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/m25-lab/lightning-network-node/internal/channel"
+	client "github.com/m25-lab/lightning-network-node/internal/client"
 	"github.com/m25-lab/lightning-network-node/internal/pb"
 	"github.com/m25-lab/lightning-network-node/internal/tx"
 
@@ -13,7 +14,8 @@ import (
 )
 
 func main() {
-	runGrpcGateway()
+	//runGrpcGateway()
+	client.OpenChannel()
 }
 
 func runGrpcGateway() {

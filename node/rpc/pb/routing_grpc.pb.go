@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.9
-// source: routing.proto
+// source: node/rpc/proto/routing.proto
 
 package pb
 
@@ -101,5 +101,5 @@ var RoutingService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "routing.proto",
+	Metadata: "node/rpc/proto/routing.proto",
 }

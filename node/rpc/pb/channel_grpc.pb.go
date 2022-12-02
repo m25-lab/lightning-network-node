@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.9
-// source: channel.proto
+// source: node/rpc/proto/channel.proto
 
 package pb
 
@@ -209,5 +209,5 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "channel.proto",
+	Metadata: "node/rpc/proto/channel.proto",
 }

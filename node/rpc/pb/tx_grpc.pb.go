@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.9
-// source: tx.proto
+// source: node/rpc/proto/tx.proto
 
 package pb
 
@@ -61,5 +61,5 @@ var TxService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TxServiceServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams:     []grpc.StreamDesc{},
-	Metadata:    "tx.proto",
+	Metadata:    "node/rpc/proto/tx.proto",
 }

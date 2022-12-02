@@ -2,6 +2,13 @@ syntax = "proto3";
 
 option go_package = "github.com/m25-lab/lightning-network-node/pb";
 
+service ChannelService {
+    rpc OpenChannel (OpenChannelRequest) returns (OpenChannelResponse) {}
+    rpc CreateCommitment(CreateCommitmentRequest) returns (CreateCommitmentResponse) {}
+    rpc WithdrawHashlock(WithdrawHashlockRequest) returns (WithdrawHashlockResponse) {}
+    rpc WithdrawTimelock(WithdrawTimelockRequest) returns (WithdrawTimelockResponse) {}
+}
+
 message OpenChannelRequest {
     string accountA = 1;
     string accountB = 2;

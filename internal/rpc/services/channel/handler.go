@@ -3,7 +3,7 @@ package channel
 import (
 	"context"
 
-	"github.com/m25-lab/lightning-network-node/internal/pb"
+	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 )
 
 type ChannelGrpcHandler struct {

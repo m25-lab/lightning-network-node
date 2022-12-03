@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/m25-lab/lightning-network-node/internal/client"
 
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/node"
@@ -14,6 +15,9 @@ func checkErr(err error) {
 }
 
 func main() {
+	//test
+	client.OpenChannel()
+
 	config, err := config.LoadConfig()
 	checkErr(err)
 

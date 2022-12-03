@@ -2,13 +2,13 @@ package channel
 
 import (
 	"context"
-	"github.com/AstraProtocol/astra-go-sdk/account"
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/m25-lab/lightning-network-node/internal/account"
 )
 
 type Channel struct {

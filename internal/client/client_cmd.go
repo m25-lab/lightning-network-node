@@ -2,49 +2,50 @@ package client
 
 import (
 	"fmt"
-	"github.com/AstraProtocol/astra-go-sdk/account"
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
+	"github.com/m25-lab/lightning-network-node/internal/common"
+	"math"
+	"math/big"
 )
 
 func OpenChannel() {
 	c := NewClient()
 	acc := c.NewAccountClient()
-	accountTiki, _ := acc.ImportAccount("gadget final blue appear hero retire wild account message social health hobby decade neglect common egg cruel certain phrase myself alert enlist brother sure")
-	privateNewAccount := initAccount(acc, c)
-	account2, _ := acc.ImportPrivateKey(privateNewAccount)
-	fmt.Println("accountTiki:", accountTiki.AccAddress().String())
-	fmt.Println("account2:", account2.AccAddress().String())
-	fmt.Println("privateNewAccount", privateNewAccount)
+	A_account, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
+	B_account, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
+	fmt.Println("account A:", A_account.AccAddress().String())
+	fmt.Println("account B:", B_account.AccAddress().String())
 
-	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(accountTiki.PublicKey(), account2.PublicKey(), 2)
-	//transfer(c, accountTiki.PrivateKeyToString(), multisigAddr)
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(A_account.PublicKey(), B_account.PublicKey(), 2)
+	transfer(c, A_account.PrivateKeyToString(), B_account.AccAddress().String())
 	fmt.Println("multisigAddr", multisigAddr)
 
 	openChannelRequest := channel.SignMsgRequest{
 		Msg: channelTypes.NewMsgOpenChannel(
 			multisigAddr,
-			accountTiki.AccAddress().String(),
-			account2.AccAddress().String(),
+			A_account.AccAddress().String(),
+			B_account.AccAddress().String(),
 			&types.Coin{
-				Denom:  "cosmos",
+				Denom:  "token",
 				Amount: types.NewInt(10),
 			},
 			&types.Coin{
-				Denom:  "cosmos",
+				Denom:  "token",
 				Amount: types.NewInt(10),
 			},
 			multisigAddr,
 			"1",
 		),
 		GasLimit: 200000,
-		GasPrice: "0cosmos",
+		GasPrice: "0token",
 	}
 
 	channelClient := c.NewChannelClient()
 
-	msg, strSig, err := channelClient.CreateMultisigMsg(openChannelRequest, accountTiki, multiSigPubkey)
+	msg, strSig, err := channelClient.CreateMultisigMsg(openChannelRequest, A_account, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}
@@ -57,14 +58,42 @@ func OpenChannel() {
 	fmt.Println(txJSON, strSig)
 }
 
-func initAccount(acc *account.Account, c *Client) string {
-	accountMain, err := acc.ImportPrivateKey("4F4FF288768511CE723C9AC765398C981C2492E72B69971DE5303F7B9D12CF2E")
+func transfer(c *Client, privateKey string, toAddress string) {
+	bankClient := c.NewBankClient()
+	amount := big.NewInt(0).Mul(big.NewInt(10), big.NewInt(0).SetUint64(uint64(math.Pow10(1))))
+	request := &bank.TransferRequest{
+		PrivateKey: privateKey,
+		Receiver:   toAddress,
+		Amount:     amount,
+		GasLimit:   200000,
+		GasPrice:   "0token",
+	}
+
+	txBuilder, err := bankClient.TransferRawDataWithPrivateKey(request)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("main account", accountMain.AccAddress().String())
-	privKey2, err := acc.CreateAccount()
-	account2, err := acc.ImportPrivateKey(privKey2.PrivateKeyToString())
-	fmt.Println("new account", account2.AccAddress().String())
-	return privKey2.PrivateKeyToString()
+
+	fmt.Println(txBuilder.GetTx().GetMsgs())
+
+	txJson, err := common.TxBuilderJsonEncoder(c.RpcClient().TxConfig, txBuilder)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(txJson)
+
+	txByte, err := common.TxBuilderJsonDecoder(c.RpcClient().TxConfig, txJson)
+	if err != nil {
+		panic(err)
+	}
+
+	txHash := common.TxHash(txByte)
+	fmt.Println("txHash", txHash)
+
+	response, err := c.RpcClient().BroadcastTxCommit(txByte)
+	fmt.Println(response)
+	if err != nil {
+		panic(err)
+	}
 }

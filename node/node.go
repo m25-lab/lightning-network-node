@@ -5,15 +5,13 @@ import (
 
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/node/database/mongodb"
-	"github.com/m25-lab/lightning-network-node/node/p2p"
 	"github.com/m25-lab/lightning-network-node/node/rpc"
 )
 
 type LightningNode struct {
-	Config    *config.Config
-	Database  *mongodb.MongoDB
-	NodeTable p2p.NodeTable
-	Server    *rpc.NodeServer
+	Config   *config.Config
+	Database *mongodb.MongoDB
+	Server   *rpc.NodeServer
 }
 
 func New(config *config.Config) (*LightningNode, error) {
@@ -28,10 +26,9 @@ func New(config *config.Config) (*LightningNode, error) {
 	}
 
 	node := &LightningNode{
-		Config:    config,
-		Database:  database,
-		NodeTable: p2p.NodeTable{},
-		Server:    server,
+		Config:   config,
+		Database: database,
+		Server:   server,
 	}
 
 	return node, nil

@@ -2,8 +2,6 @@ package client
 
 import (
 	"fmt"
-	"github.com/AstraProtocol/astra-go-sdk/account"
-	"github.com/AstraProtocol/astra-go-sdk/bank"
 	"github.com/AstraProtocol/astra/v2/app"
 	sdkClient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -11,6 +9,8 @@ import (
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/evmos/ethermint/encoding"
 	ethermintTypes "github.com/evmos/ethermint/types"
+	"github.com/m25-lab/lightning-network-node/internal/account"
+	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 )
 
@@ -31,11 +31,11 @@ type Config struct {
 
 func NewClient() *Client {
 	cfg := &Config{
-		ChainId:       "astra_11110-1",
+		ChainId:       "channel",
 		Endpoint:      "http://0.0.0.0:26657",
 		CoinType:      60,
 		PrefixAddress: "cosmos",
-		TokenSymbol:   "cosmos",
+		TokenSymbol:   "token",
 	}
 	fmt.Println(cfg)
 	client := new(Client)

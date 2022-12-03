@@ -11,4 +11,7 @@ type Channel struct {
 	amount     [2]uint64
 	sequence   uint32
 	signatures [2]string
+	isOpen     bool
 }
+
+type ListOpenChannel []Channel

@@ -6,6 +6,6 @@ type ChannelServer struct {
 	pb.UnimplementedChannelServiceServer
 }
 
-func NewServer() (*ChannelServer, error) {
+func New() (*ChannelServer, error) {
 	return &ChannelServer{}, nil
 }

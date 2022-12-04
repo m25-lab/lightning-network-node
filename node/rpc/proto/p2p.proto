@@ -3,12 +3,16 @@ syntax = "proto3";
 option go_package = "github.com/m25-lab/lightning-network-node/pb";
 
 service PeerToPeer {
-  rpc GetNodeTable(GetRoutingNodeRequest) returns (GetRoutingNodeResponse) {}
+  rpc GetListPeer(GetListPeerRequest) returns (GetListPeerResponse) {}
 }
 
 message GetListPeerRequest {
 }
 
 message GetListPeerResponse {
-  listPeer core
+  message Peer {
+    string addr = 1;
+  }
+
+  repeated Peer ListPeer = 1;
 }

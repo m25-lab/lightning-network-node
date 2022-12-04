@@ -4,50 +4,51 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
-	"github.com/m25-lab/lightning-network-node/node/rpc/services/channel"
-	"github.com/m25-lab/lightning-network-node/node/rpc/services/routing"
+	"github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
+	p2pserver "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/p2p"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-type NodeServer struct {
+type RPCServer struct {
 	grpcServer     *grpc.Server
 	serviceServers ServiceServers
 }
 
 type ServiceServers struct {
-	routingServer *routing.RoutingServer
+	p2pServer     *p2pserver.PeerToPeerServer
 	channelServer *channel.ChannelServer
 }
 
-func New() (*NodeServer, error) {
+func New(node *node.LightningNode) (*RPCServer, error) {
 	var err error
-	var nodeServer NodeServer
+	var rpcServer RPCServer
 
 	//Init service servers
-	nodeServer.serviceServers.routingServer, err = routing.NewServer()
+	rpcServer.serviceServers.p2pServer, err = p2pserver.New(node)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeServer.serviceServers.channelServer, err = channel.NewServer()
+	rpcServer.serviceServers.channelServer, err = channel.New()
 	if err != nil {
 		return nil, err
 	}
 
-	nodeServer.grpcServer = grpc.NewServer()
-	reflection.Register(nodeServer.grpcServer)
+	rpcServer.grpcServer = grpc.NewServer()
+	reflection.Register(rpcServer.grpcServer)
 
 	//Register service servers
-	pb.RegisterRoutingServiceServer(nodeServer.grpcServer, nodeServer.serviceServers.routingServer)
+	pb.RegisterPeerToPeerServer(rpcServer.grpcServer, rpcServer.serviceServers.p2pServer)
 	//pb.RegisterChannelServiceServer(nodeServer.grpcServer, nodeServer.serviceServers.channelServer)
 
-	return &nodeServer, nil
+	return &rpcServer, nil
 }
 
-func (gateway *NodeServer) Run() error {
+func (gateway *RPCServer) RunGateway() error {
 	listener, err := net.Listen("tcp", "0.0.0.0:2525")
 	if err != nil {
 		return err

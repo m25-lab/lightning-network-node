@@ -6,15 +6,13 @@ import (
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/node/core"
 	"github.com/m25-lab/lightning-network-node/node/database/mongodb"
-	"github.com/m25-lab/lightning-network-node/node/p2p"
-	"github.com/m25-lab/lightning-network-node/node/rpc"
+	"github.com/m25-lab/lightning-network-node/node/p2p/peer"
 )
 
 type LightningNode struct {
 	Config          *config.Config
 	Database        *mongodb.MongoDB
-	Server          *rpc.NodeServer
-	ListPeer        p2p.ListPeer
+	ListPeer        peer.ListPeer
 	ListOpenChannel core.ListOpenChannel
 }
 
@@ -24,16 +22,10 @@ func New(config *config.Config) (*LightningNode, error) {
 		return nil, err
 	}
 
-	server, err := rpc.New()
-	if err != nil {
-		return nil, err
-	}
-
 	node := &LightningNode{
 		Config:          config,
 		Database:        database,
-		Server:          server,
-		ListPeer:        p2p.ListPeer{},
+		ListPeer:        peer.ListPeer{},
 		ListOpenChannel: core.ListOpenChannel{},
 	}
 

@@ -1,7 +1,0 @@
-syntax = "proto3"
-
-option go_package = "github.com/m25-lab/lightning-network-node/pb";
-
-message PeerStruct {
-  ip []byte
-}

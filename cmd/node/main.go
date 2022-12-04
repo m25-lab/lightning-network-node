@@ -5,6 +5,7 @@ import (
 
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/node"
+	"github.com/m25-lab/lightning-network-node/node/rpc"
 )
 
 func checkErr(err error) {
@@ -21,7 +22,10 @@ func main() {
 	checkErr(err)
 	defer node.CleanUp()
 
-	err = node.Server.Run()
+	rpcServer, err := rpc.New(node)
+	checkErr(err)
+
+	err = rpcServer.RunGateway()
 	checkErr(err)
 
 	fmt.Println("Connected to MongoDB!")

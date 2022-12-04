@@ -7,15 +7,28 @@ import (
 	"net"
 )
 
-type ipVersion uint8
+type IPVersion uint8
 
 const (
-	ipv4 ipVersion = 0
-	ipv6 ipVersion = 1
+	ipv4    IPVersion = 0
+	ipv6    IPVersion = 1
+	unknown IPVersion = 255
 )
 
+func GetIPVersion(addr *net.TCPAddr) (IPVersion, error) {
+	if addr.IP.To4() != nil {
+		return ipv4, nil
+	}
+
+	if addr.IP.To16() != nil {
+		return ipv6, nil
+	}
+
+	return unknown, fmt.Errorf("unable to encode IP %v", addr.IP)
+}
+
 /*
-Encode layout: |ip version|address|port|
+Encode layout: |version|address|port|
 */
 func EncodeTCPAddress(w io.Writer, addr *net.TCPAddr) error {
 	var (
@@ -52,38 +65,13 @@ func EncodeTCPAddress(w io.Writer, addr *net.TCPAddr) error {
 	return nil
 }
 
-func decodePort(r io.Reader) (int, error) {
-	var port [2]byte
-	if _, err := r.Read(port[:]); err != nil {
-		return 0, err
-	}
-
-	return int(binary.BigEndian.Uint16(port[:])), nil
-}
-
-func decodeIP(r io.Reader, ipVer ipVersion) (net.IP, error) {
-	var len uint
-	if ipVer == ipv4 {
-		len = 4
-	} else {
-		len = 16
-	}
-
-	ip := make([]byte, len)
-	if _, err := r.Read(ip[:]); err != nil {
-		return nil, err
-	}
-
-	return net.IP(ip[:]), nil
-}
-
 func DecodeIPAddress(r io.Reader) (net.Addr, error) {
 	var ipVer [1]byte
 	if _, err := r.Read(ipVer[:]); err != nil {
 		return nil, err
 	}
 
-	ip, err := decodeIP(r, ipVersion(ipVer[0]))
+	ip, err := decodeIP(r, IPVersion(ipVer[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -97,4 +85,29 @@ func DecodeIPAddress(r io.Reader) (net.Addr, error) {
 		IP:   ip,
 		Port: port,
 	}, nil
+}
+
+func decodePort(r io.Reader) (int, error) {
+	var port [2]byte
+	if _, err := r.Read(port[:]); err != nil {
+		return 0, err
+	}
+
+	return int(binary.BigEndian.Uint16(port[:])), nil
+}
+
+func decodeIP(r io.Reader, ipVer IPVersion) (net.IP, error) {
+	var len uint
+	if ipVer == ipv4 {
+		len = 4
+	} else {
+		len = 16
+	}
+
+	ip := make([]byte, len)
+	if _, err := r.Read(ip[:]); err != nil {
+		return nil, err
+	}
+
+	return net.IP(ip[:]), nil
 }

@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/m25-lab/lightning-network-node/internal/account"
 	"github.com/m25-lab/lightning-network-node/internal/common"
+	"github.com/pkg/errors"
 )
 
 type Channel struct {
@@ -40,17 +41,17 @@ func (cn *Channel) CreateMultisigMsg(req SignMsgRequest,
 		return nil, "", err
 	}
 
-	//err = newTx.SignTxWithSignerAddress(txBuilder, multiSigPubkey)
-	//if err != nil {
-	//	return nil, "", errors.Wrap(err, "SignTx")
-	//}
-	//
-	//sign, err := common.TxBuilderSignatureJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
-	//if err != nil {
-	//	return nil, "", errors.Wrap(err, "GetSign")
-	//}
+	err = newTx.SignTxWithSignerAddress(txBuilder, multiSigPubkey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "SignTx")
+	}
 
-	return txBuilder.GetTx().(sdk.Tx), "", nil
+	sign, err := common.TxBuilderSignatureJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "GetSign")
+	}
+
+	return txBuilder.GetTx().(sdk.Tx), sign, nil
 }
 
 func (cn *Channel) ListChannel() (*channelTypes.QueryAllChannelResponse, error) {

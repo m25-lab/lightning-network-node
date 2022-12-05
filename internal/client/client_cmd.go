@@ -11,16 +11,18 @@ import (
 	"math/big"
 )
 
-func OpenChannel() {
+func OpenChannelFromA() {
 	c := NewClient()
 	acc := c.NewAccountClient()
 	A_account, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
 	B_account, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
 	fmt.Println("account A:", A_account.AccAddress().String())
 	fmt.Println("account B:", B_account.AccAddress().String())
+	fmt.Println("PrivateKey", A_account.PrivateKeyToString())
+	fmt.Println("PublicKey", A_account.PublicKey())
 
 	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(A_account.PublicKey(), B_account.PublicKey(), 2)
-	transfer(c, A_account.PrivateKeyToString(), B_account.AccAddress().String())
+	transfer(c, A_account.PrivateKeyToString(), multisigAddr)
 	fmt.Println("multisigAddr", multisigAddr)
 
 	openChannelRequest := channel.SignMsgRequest{
@@ -56,6 +58,7 @@ func OpenChannel() {
 	}
 	txJSON := string(txJSONBytes)
 	fmt.Println(txJSON, strSig)
+
 }
 
 func transfer(c *Client, privateKey string, toAddress string) {
@@ -74,14 +77,10 @@ func transfer(c *Client, privateKey string, toAddress string) {
 		panic(err)
 	}
 
-	fmt.Println(txBuilder.GetTx().GetMsgs())
-
 	txJson, err := common.TxBuilderJsonEncoder(c.RpcClient().TxConfig, txBuilder)
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(txJson)
 
 	txByte, err := common.TxBuilderJsonDecoder(c.RpcClient().TxConfig, txJson)
 	if err != nil {
@@ -91,8 +90,8 @@ func transfer(c *Client, privateKey string, toAddress string) {
 	txHash := common.TxHash(txByte)
 	fmt.Println("txHash", txHash)
 
-	response, err := c.RpcClient().BroadcastTxCommit(txByte)
-	fmt.Println(response)
+	_, err = c.RpcClient().BroadcastTxCommit(txByte)
+
 	if err != nil {
 		panic(err)
 	}

@@ -1,17 +1,14 @@
 package common
 
 import (
-	"context"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/m25-lab/lightning-network-node/internal/account"
 
 	"github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authSigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	emvTypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +49,7 @@ func (t *Tx) PrintUnsignedTx(msg types.Msg) (string, error) {
 }
 
 func (t *Tx) prepareSignTx() error {
-	coinType := t.privateKey.CoinType()
+	//coinType := t.privateKey.CoinType()
 	from := t.privateKey.AccAddress()
 
 	//@Todo: tmp
@@ -65,24 +62,24 @@ func (t *Tx) prepareSignTx() error {
 		var accNum, accSeq uint64
 		var err error
 
-		if coinType == 60 {
-			hexAddress := common.BytesToAddress(t.privateKey.PublicKey().Address().Bytes())
-
-			queryClient := emvTypes.NewQueryClient(t.rpcClient)
-			cosmosAccount, err := queryClient.CosmosAccount(context.Background(), &emvTypes.QueryCosmosAccountRequest{Address: hexAddress.String()})
-			if err != nil {
-				return errors.Wrap(err, "CosmosAccount")
-			}
-
-			accNum = cosmosAccount.AccountNumber
-			accSeq = cosmosAccount.Sequence
-
-		} else {
-			accNum, accSeq, err = t.rpcClient.AccountRetriever.GetAccountNumberSequence(t.rpcClient, from)
-			if err != nil {
-				return errors.Wrap(err, "GetAccountNumberSequence")
-			}
+		//if coinType == 60 {
+		//	hexAddress := common.BytesToAddress(t.privateKey.PublicKey().Address().Bytes())
+		//
+		//	queryClient := emvTypes.NewQueryClient(t.rpcClient)
+		//	cosmosAccount, err := queryClient.CosmosAccount(context.Background(), &emvTypes.QueryCosmosAccountRequest{Address: hexAddress.String()})
+		//	if err != nil {
+		//		return errors.Wrap(err, "CosmosAccount")
+		//	}
+		//
+		//	accNum = cosmosAccount.AccountNumber
+		//	accSeq = cosmosAccount.Sequence
+		//
+		//} else {
+		accNum, accSeq, err = t.rpcClient.AccountRetriever.GetAccountNumberSequence(t.rpcClient, from)
+		if err != nil {
+			return errors.Wrap(err, "GetAccountNumberSequence")
 		}
+		//}
 
 		t.txf = t.txf.WithAccountNumber(accNum)
 		t.txf = t.txf.WithSequence(accSeq)

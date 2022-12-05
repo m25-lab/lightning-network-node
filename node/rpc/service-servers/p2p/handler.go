@@ -3,39 +3,44 @@ package p2pserver
 import (
 	"context"
 	"fmt"
-	"net"
-	"strconv"
 
-	"github.com/m25-lab/lightning-network-node/node/p2p"
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"google.golang.org/grpc/peer"
 )
 
 type PeerToPeerHandler struct {
 }
 
-/*
-layout: |version address:port|
-*/
-func addrToString(addr *net.TCPAddr) (string, error) {
-	ipVer, err := p2p.GetIPVersion(addr)
+func (server *PeerToPeerServer) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.ConnectResponse, error) {
+	p, _ := peer.FromContext(ctx)
+
+	err := server.Node.AddNewPeer(p.Addr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return fmt.Sprintf("%s %s", strconv.Itoa(int(ipVer)), addr.String()), nil
+	listPeer, err := server.Node.ListPeer.Proto()
+	if err != nil {
+		return nil, err
+	}
+
+	listChannel, err := server.Node.ListOpenChannel.Proto()
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(listChannel)
+
+	return &pb.ConnectResponse{
+		ListPeer:    listPeer,
+		ListChannel: listChannel,
+	}, nil
 }
 
 func (server *PeerToPeerServer) GetListPeer(ctx context.Context, req *pb.GetListPeerRequest) (*pb.GetListPeerResponse, error) {
-	listPeerProto := make([]*pb.GetListPeerResponse_Peer, len(server.Node.ListPeer))
-	for index, peer := range server.Node.ListPeer {
-		strAddr, err := addrToString(&peer.Addr)
-		if err != nil {
-			return nil, err
-		}
-
-		listPeerProto[index] = &pb.GetListPeerResponse_Peer{
-			Addr: strAddr,
-		}
+	listPeerProto, err := server.Node.ListPeer.Proto()
+	if err != nil {
+		return nil, err
 	}
 
 	return &pb.GetListPeerResponse{

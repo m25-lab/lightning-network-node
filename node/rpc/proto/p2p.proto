@@ -1,18 +1,36 @@
 syntax = "proto3";
 
+package pb;
+
+import "node/rpc/proto/struct.proto";
+
 option go_package = "github.com/m25-lab/lightning-network-node/pb";
 
 service PeerToPeer {
+  rpc Connect(ConnectRequest) returns (ConnectResponse) {}
   rpc GetListPeer(GetListPeerRequest) returns (GetListPeerResponse) {}
+  rpc GetListChannel(GetListChannelRequest) returns (GetListPeerResponse) {}
 }
 
 message GetListPeerRequest {
 }
 
 message GetListPeerResponse {
-  message Peer {
-    string addr = 1;
-  }
-
   repeated Peer ListPeer = 1;
+}
+
+message GetListChannelRequest {
+}
+
+message GetListChannelResponse {
+  repeated Channel ListChannel = 1;
+}
+
+message ConnectRequest {
+}
+
+message ConnectResponse {
+  string status = 1;
+  repeated Peer ListPeer = 2;
+  repeated Channel ListChannel = 3;
 }

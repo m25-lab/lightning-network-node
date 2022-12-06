@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/node/rpc"

@@ -39,11 +39,12 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	}
 
 	rpcServer.grpcServer = grpc.NewServer()
-	reflection.Register(rpcServer.grpcServer)
 
 	//Register service servers
 	pb.RegisterPeerToPeerServer(rpcServer.grpcServer, rpcServer.serviceServers.p2pServer)
-	//pb.RegisterChannelServiceServer(nodeServer.grpcServer, nodeServer.serviceServers.channelServer)
+	pb.RegisterChannelServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.channelServer)
+
+	reflection.Register(rpcServer.grpcServer)
 
 	return &rpcServer, nil
 }

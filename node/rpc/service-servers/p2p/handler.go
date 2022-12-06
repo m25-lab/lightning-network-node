@@ -2,7 +2,6 @@ package p2pserver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 	"google.golang.org/grpc/peer"
@@ -28,8 +27,6 @@ func (server *PeerToPeerServer) Connect(ctx context.Context, req *pb.ConnectRequ
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(listChannel)
 
 	return &pb.ConnectResponse{
 		ListPeer:    listPeer,

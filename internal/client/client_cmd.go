@@ -14,22 +14,22 @@ import (
 func OpenChannelFromA() {
 	c := NewClient()
 	acc := c.NewAccountClient()
-	A_account, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
-	B_account, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
-	fmt.Println("account A:", A_account.AccAddress().String())
-	fmt.Println("account B:", B_account.AccAddress().String())
-	fmt.Println("PrivateKey", A_account.PrivateKeyToString())
-	fmt.Println("PublicKey", A_account.PublicKey())
+	AAccount, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
+	BAccount, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
+	fmt.Println("account A:", AAccount.AccAddress().String())
+	fmt.Println("account B:", BAccount.AccAddress().String())
+	fmt.Println("PrivateKey", AAccount.PrivateKeyToString())
+	fmt.Println("ÏÏPublicKey", AAccount.PublicKey())
 
-	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(A_account.PublicKey(), B_account.PublicKey(), 2)
-	transfer(c, A_account.PrivateKeyToString(), multisigAddr)
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+	transfer(c, AAccount.PrivateKeyToString(), multisigAddr)
 	fmt.Println("multisigAddr", multisigAddr)
 
 	openChannelRequest := channel.SignMsgRequest{
 		Msg: channelTypes.NewMsgOpenChannel(
 			multisigAddr,
-			A_account.AccAddress().String(),
-			B_account.AccAddress().String(),
+			AAccount.AccAddress().String(),
+			BAccount.AccAddress().String(),
 			&types.Coin{
 				Denom:  "token",
 				Amount: types.NewInt(10),
@@ -47,7 +47,7 @@ func OpenChannelFromA() {
 
 	channelClient := c.NewChannelClient()
 
-	msg, strSig, err := channelClient.CreateMultisigMsg(openChannelRequest, A_account, multiSigPubkey)
+	msg, strSig, err := channelClient.CreateMultisigMsg(openChannelRequest, AAccount, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}

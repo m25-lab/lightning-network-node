@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package pb;
+package p2p;
 
 import "node/rpc/proto/struct.proto";
 

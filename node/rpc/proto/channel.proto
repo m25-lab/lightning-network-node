@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package channel;
+
 option go_package = "github.com/m25-lab/lightning-network-node/pb";
 
 service ChannelService {
@@ -28,7 +30,7 @@ message CreateCommitmentRequest {
     string toAHashlock = 3;
     string hashCode = 4;
     string toBHashlock = 5;
-    string sequence = 6;
+    string blockHeight = 6;
     uint64 coinLock = 7;
 }
 

@@ -57,7 +57,7 @@ func RegisterTxServiceServer(s grpc.ServiceRegistrar, srv TxServiceServer) {
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var TxService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "TxService",
+	ServiceName: "transaction.TxService",
 	HandlerType: (*TxServiceServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams:     []grpc.StreamDesc{},

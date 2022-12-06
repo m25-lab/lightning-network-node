@@ -38,7 +38,7 @@ func NewChannelServiceClient(cc grpc.ClientConnInterface) ChannelServiceClient {
 
 func (c *channelServiceClient) OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*OpenChannelResponse, error) {
 	out := new(OpenChannelResponse)
-	err := c.cc.Invoke(ctx, "/ChannelService/OpenChannel", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/OpenChannel", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (c *channelServiceClient) OpenChannel(ctx context.Context, in *OpenChannelR
 
 func (c *channelServiceClient) CreateCommitment(ctx context.Context, in *CreateCommitmentRequest, opts ...grpc.CallOption) (*CreateCommitmentResponse, error) {
 	out := new(CreateCommitmentResponse)
-	err := c.cc.Invoke(ctx, "/ChannelService/CreateCommitment", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/CreateCommitment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (c *channelServiceClient) CreateCommitment(ctx context.Context, in *CreateC
 
 func (c *channelServiceClient) WithdrawHashlock(ctx context.Context, in *WithdrawHashlockRequest, opts ...grpc.CallOption) (*WithdrawHashlockResponse, error) {
 	out := new(WithdrawHashlockResponse)
-	err := c.cc.Invoke(ctx, "/ChannelService/WithdrawHashlock", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/WithdrawHashlock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (c *channelServiceClient) WithdrawHashlock(ctx context.Context, in *Withdra
 
 func (c *channelServiceClient) WithdrawTimelock(ctx context.Context, in *WithdrawTimelockRequest, opts ...grpc.CallOption) (*WithdrawTimelockResponse, error) {
 	out := new(WithdrawTimelockResponse)
-	err := c.cc.Invoke(ctx, "/ChannelService/WithdrawTimelock", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/WithdrawTimelock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func _ChannelService_OpenChannel_Handler(srv interface{}, ctx context.Context, d
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChannelService/OpenChannel",
+		FullMethod: "/channel.ChannelService/OpenChannel",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChannelServiceServer).OpenChannel(ctx, req.(*OpenChannelRequest))
@@ -140,7 +140,7 @@ func _ChannelService_CreateCommitment_Handler(srv interface{}, ctx context.Conte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChannelService/CreateCommitment",
+		FullMethod: "/channel.ChannelService/CreateCommitment",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChannelServiceServer).CreateCommitment(ctx, req.(*CreateCommitmentRequest))
@@ -158,7 +158,7 @@ func _ChannelService_WithdrawHashlock_Handler(srv interface{}, ctx context.Conte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChannelService/WithdrawHashlock",
+		FullMethod: "/channel.ChannelService/WithdrawHashlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChannelServiceServer).WithdrawHashlock(ctx, req.(*WithdrawHashlockRequest))
@@ -176,7 +176,7 @@ func _ChannelService_WithdrawTimelock_Handler(srv interface{}, ctx context.Conte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChannelService/WithdrawTimelock",
+		FullMethod: "/channel.ChannelService/WithdrawTimelock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChannelServiceServer).WithdrawTimelock(ctx, req.(*WithdrawTimelockRequest))
@@ -188,7 +188,7 @@ func _ChannelService_WithdrawTimelock_Handler(srv interface{}, ctx context.Conte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChannelService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChannelService",
+	ServiceName: "channel.ChannelService",
 	HandlerType: (*ChannelServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

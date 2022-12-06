@@ -37,7 +37,7 @@ func NewPeerToPeerClient(cc grpc.ClientConnInterface) PeerToPeerClient {
 
 func (c *peerToPeerClient) Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectResponse, error) {
 	out := new(ConnectResponse)
-	err := c.cc.Invoke(ctx, "/pb.PeerToPeer/Connect", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/p2p.PeerToPeer/Connect", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *peerToPeerClient) Connect(ctx context.Context, in *ConnectRequest, opts
 
 func (c *peerToPeerClient) GetListPeer(ctx context.Context, in *GetListPeerRequest, opts ...grpc.CallOption) (*GetListPeerResponse, error) {
 	out := new(GetListPeerResponse)
-	err := c.cc.Invoke(ctx, "/pb.PeerToPeer/GetListPeer", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/p2p.PeerToPeer/GetListPeer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *peerToPeerClient) GetListPeer(ctx context.Context, in *GetListPeerReque
 
 func (c *peerToPeerClient) GetListChannel(ctx context.Context, in *GetListChannelRequest, opts ...grpc.CallOption) (*GetListPeerResponse, error) {
 	out := new(GetListPeerResponse)
-	err := c.cc.Invoke(ctx, "/pb.PeerToPeer/GetListChannel", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/p2p.PeerToPeer/GetListChannel", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func _PeerToPeer_Connect_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.PeerToPeer/Connect",
+		FullMethod: "/p2p.PeerToPeer/Connect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PeerToPeerServer).Connect(ctx, req.(*ConnectRequest))
@@ -126,7 +126,7 @@ func _PeerToPeer_GetListPeer_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.PeerToPeer/GetListPeer",
+		FullMethod: "/p2p.PeerToPeer/GetListPeer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PeerToPeerServer).GetListPeer(ctx, req.(*GetListPeerRequest))
@@ -144,7 +144,7 @@ func _PeerToPeer_GetListChannel_Handler(srv interface{}, ctx context.Context, de
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.PeerToPeer/GetListChannel",
+		FullMethod: "/p2p.PeerToPeer/GetListChannel",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PeerToPeerServer).GetListChannel(ctx, req.(*GetListChannelRequest))
@@ -156,7 +156,7 @@ func _PeerToPeer_GetListChannel_Handler(srv interface{}, ctx context.Context, de
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PeerToPeer_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.PeerToPeer",
+	ServiceName: "p2p.PeerToPeer",
 	HandlerType: (*PeerToPeerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

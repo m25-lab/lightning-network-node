@@ -7,6 +7,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 	"github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
+	channelServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
 	p2pserver "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/p2p"
 
 	"google.golang.org/grpc"
@@ -33,7 +34,7 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 		return nil, err
 	}
 
-	rpcServer.serviceServers.channelServer, err = channel.New()
+	rpcServer.serviceServers.channelServer, err = channelServer.New()
 	if err != nil {
 		return nil, err
 	}

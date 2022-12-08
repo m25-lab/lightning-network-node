@@ -1,7 +1,10 @@
 package main
 
-import "github.com/m25-lab/lightning-network-node/internal/client"
+import (
+	"github.com/m25-lab/lightning-network-node/internal/client"
+)
 
 func main() {
-	client.OpenChannelFromA()
+	channelId := client.OpenChannelFromA()
+	client.OpenChannelFromB(channelId)
 }

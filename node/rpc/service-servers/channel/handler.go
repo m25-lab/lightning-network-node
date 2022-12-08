@@ -40,7 +40,33 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 	}
 
 	return &pb.OpenChannelResponse{
-		Response: "OK",
+		Response: openChannelRequest.ID.Hex(),
+	}, nil
+}
+
+func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRequest) (*pb.GetChannelResponse, error) {
+	var channelResult model.OpenChannelRequest
+	objectId, err := primitive.ObjectIDFromHex(req.Id)
+	if err != nil {
+		return &pb.GetChannelResponse{}, err
+	}
+	if err := c.Node.Database.ChannelCollection.FindOne(
+		ctx,
+		bson.M{
+			"_id": objectId,
+		}).Decode(&channelResult); err != nil {
+	}
+
+	strPayload, _ := bson.MarshalExtJSON(channelResult.Payload, false, false)
+
+	return &pb.GetChannelResponse{
+		Id:          channelResult.ID.Hex(),
+		Status:      channelResult.Status,
+		FromAddress: channelResult.FromAddress,
+		ToAddress:   channelResult.ToAddress,
+		SignatureA:  channelResult.SignatureA,
+		SignatureB:  channelResult.SignatureB,
+		Payload:     string(strPayload),
 	}, nil
 }
 

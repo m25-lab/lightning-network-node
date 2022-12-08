@@ -6,6 +6,8 @@ option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 service ChannelService {
     rpc OpenChannel (OpenChannelRequest) returns (OpenChannelResponse) {}
+    rpc GetChannels (GetChannelsRequest) returns (GetChannelsResponse) {}
+    rpc GetChannelById (GetChannelRequest) returns (GetChannelResponse) {}
     rpc CreateCommitment(CreateCommitmentRequest) returns (CreateCommitmentResponse) {}
     rpc WithdrawHashlock(WithdrawHashlockRequest) returns (WithdrawHashlockResponse) {}
     rpc WithdrawTimelock(WithdrawTimelockRequest) returns (WithdrawTimelockResponse) {}
@@ -55,4 +57,24 @@ message WithdrawTimelockRequest{
 
 message WithdrawTimelockResponse {
     string response = 1;
+}
+
+message GetChannelsRequest {
+    string address = 1;
+}
+message GetChannelsResponse {
+    repeated GetChannelResponse rows = 1;
+}
+
+message GetChannelRequest {
+    string id = 1;
+}
+message GetChannelResponse {
+    string id = 1;
+    string status = 2;
+    string fromAddress = 3;
+    string toAddress = 4;
+    string signatureA = 5;
+    string signatureB = 6;
+    string payload = 7;
 }

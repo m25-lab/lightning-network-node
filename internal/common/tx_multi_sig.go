@@ -1,12 +1,10 @@
 package common
 
 import (
-	"context"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/m25-lab/lightning-network-node/internal/account"
 
 	keyMultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
@@ -15,7 +13,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authSigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	emvTypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +54,7 @@ func (t *TxMulSign) PrintUnsignedTx(msgs types.Msg) (string, error) {
 	return string(json), nil
 }
 
-func (t *TxMulSign) prepareSignTx(coinType uint32, pubKey cryptoTypes.PubKey) error {
+func (t *TxMulSign) prepareSignTx(pubKey cryptoTypes.PubKey) error {
 	from := types.AccAddress(pubKey.Address())
 
 	if err := t.rpcClient.AccountRetriever.EnsureExists(t.rpcClient, from); err != nil {
@@ -69,23 +66,9 @@ func (t *TxMulSign) prepareSignTx(coinType uint32, pubKey cryptoTypes.PubKey) er
 		var accNum, accSeq uint64
 		var err error
 
-		if coinType == 60 {
-			hexAddress := common.BytesToAddress(pubKey.Address().Bytes())
-
-			queryClient := emvTypes.NewQueryClient(t.rpcClient)
-			cosmosAccount, err := queryClient.CosmosAccount(context.Background(), &emvTypes.QueryCosmosAccountRequest{Address: hexAddress.String()})
-			if err != nil {
-				return errors.Wrap(err, "CosmosAccount")
-			}
-
-			accNum = cosmosAccount.AccountNumber
-			accSeq = cosmosAccount.Sequence
-
-		} else {
-			accNum, accSeq, err = t.rpcClient.AccountRetriever.GetAccountNumberSequence(t.rpcClient, from)
-			if err != nil {
-				return errors.Wrap(err, "GetAccountNumberSequence")
-			}
+		accNum, accSeq, err = t.rpcClient.AccountRetriever.GetAccountNumberSequence(t.rpcClient, from)
+		if err != nil {
+			return errors.Wrap(err, "GetAccountNumberSequence")
 		}
 
 		t.txf = t.txf.WithAccountNumber(accNum)
@@ -101,7 +84,7 @@ func (t *TxMulSign) SignTxWithSignerAddress(txBuilder client.TxBuilder, multiSig
 		return fmt.Errorf("address signer %s invalid", accMultiSignAddr.String())
 	}
 
-	err := t.prepareSignTx(t.signerPrivateKey.CoinType(), multiSignAccPubKey)
+	err := t.prepareSignTx(multiSignAccPubKey)
 	if err != nil {
 		return errors.Wrap(err, "prepareSignTx")
 	}
@@ -148,8 +131,8 @@ func (t *TxMulSign) SignTxWithSignerAddress(txBuilder client.TxBuilder, multiSig
 	return nil
 }
 
-func (t *TxMulSign) CreateTxMulSign(txBuilder client.TxBuilder, multiSignAccPubKey cryptoTypes.PubKey, coinType uint32, signOfSigner [][]signing.SignatureV2) error {
-	err := t.prepareSignTx(coinType, multiSignAccPubKey)
+func (t *TxMulSign) CreateTxMulSign(txBuilder client.TxBuilder, multiSignAccPubKey cryptoTypes.PubKey, signOfSigner [][]signing.SignatureV2) error {
+	err := t.prepareSignTx(multiSignAccPubKey)
 	if err != nil {
 		return errors.Wrap(err, "prepareSignTx")
 	}

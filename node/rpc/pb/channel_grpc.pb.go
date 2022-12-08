@@ -23,6 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChannelServiceClient interface {
 	OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*OpenChannelResponse, error)
+	GetChannels(ctx context.Context, in *GetChannelsRequest, opts ...grpc.CallOption) (*GetChannelsResponse, error)
+	GetChannelById(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*GetChannelResponse, error)
 	CreateCommitment(ctx context.Context, in *CreateCommitmentRequest, opts ...grpc.CallOption) (*CreateCommitmentResponse, error)
 	WithdrawHashlock(ctx context.Context, in *WithdrawHashlockRequest, opts ...grpc.CallOption) (*WithdrawHashlockResponse, error)
 	WithdrawTimelock(ctx context.Context, in *WithdrawTimelockRequest, opts ...grpc.CallOption) (*WithdrawTimelockResponse, error)
@@ -39,6 +41,24 @@ func NewChannelServiceClient(cc grpc.ClientConnInterface) ChannelServiceClient {
 func (c *channelServiceClient) OpenChannel(ctx context.Context, in *OpenChannelRequest, opts ...grpc.CallOption) (*OpenChannelResponse, error) {
 	out := new(OpenChannelResponse)
 	err := c.cc.Invoke(ctx, "/channel.ChannelService/OpenChannel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) GetChannels(ctx context.Context, in *GetChannelsRequest, opts ...grpc.CallOption) (*GetChannelsResponse, error) {
+	out := new(GetChannelsResponse)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/GetChannels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) GetChannelById(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*GetChannelResponse, error) {
+	out := new(GetChannelResponse)
+	err := c.cc.Invoke(ctx, "/channel.ChannelService/GetChannelById", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +97,8 @@ func (c *channelServiceClient) WithdrawTimelock(ctx context.Context, in *Withdra
 // for forward compatibility
 type ChannelServiceServer interface {
 	OpenChannel(context.Context, *OpenChannelRequest) (*OpenChannelResponse, error)
+	GetChannels(context.Context, *GetChannelsRequest) (*GetChannelsResponse, error)
+	GetChannelById(context.Context, *GetChannelRequest) (*GetChannelResponse, error)
 	CreateCommitment(context.Context, *CreateCommitmentRequest) (*CreateCommitmentResponse, error)
 	WithdrawHashlock(context.Context, *WithdrawHashlockRequest) (*WithdrawHashlockResponse, error)
 	WithdrawTimelock(context.Context, *WithdrawTimelockRequest) (*WithdrawTimelockResponse, error)
@@ -89,6 +111,12 @@ type UnimplementedChannelServiceServer struct {
 
 func (UnimplementedChannelServiceServer) OpenChannel(context.Context, *OpenChannelRequest) (*OpenChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenChannel not implemented")
+}
+func (UnimplementedChannelServiceServer) GetChannels(context.Context, *GetChannelsRequest) (*GetChannelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChannels not implemented")
+}
+func (UnimplementedChannelServiceServer) GetChannelById(context.Context, *GetChannelRequest) (*GetChannelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChannelById not implemented")
 }
 func (UnimplementedChannelServiceServer) CreateCommitment(context.Context, *CreateCommitmentRequest) (*CreateCommitmentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCommitment not implemented")
@@ -126,6 +154,42 @@ func _ChannelService_OpenChannel_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChannelServiceServer).OpenChannel(ctx, req.(*OpenChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_GetChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).GetChannels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.ChannelService/GetChannels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).GetChannels(ctx, req.(*GetChannelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_GetChannelById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).GetChannelById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.ChannelService/GetChannelById",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).GetChannelById(ctx, req.(*GetChannelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -194,6 +258,14 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OpenChannel",
 			Handler:    _ChannelService_OpenChannel_Handler,
+		},
+		{
+			MethodName: "GetChannels",
+			Handler:    _ChannelService_GetChannels_Handler,
+		},
+		{
+			MethodName: "GetChannelById",
+			Handler:    _ChannelService_GetChannelById_Handler,
 		},
 		{
 			MethodName: "CreateCommitment",

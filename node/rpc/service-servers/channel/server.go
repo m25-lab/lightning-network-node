@@ -1,11 +1,15 @@
 package channel
 
-import "github.com/m25-lab/lightning-network-node/node/rpc/pb"
+import (
+	"github.com/m25-lab/lightning-network-node/node"
+	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+)
 
 type ChannelServer struct {
 	pb.UnimplementedChannelServiceServer
+	Node *node.LightningNode
 }
 
-func New() (*ChannelServer, error) {
-	return &ChannelServer{}, nil
+func New(node *node.LightningNode) (*ChannelServer, error) {
+	return &ChannelServer{Node: node}, nil
 }

@@ -2,6 +2,7 @@ package config
 
 type Config struct {
 	Database DatabaseConfig
+	Node     NodeConfig
 }
 
 type DatabaseConfig struct {
@@ -9,4 +10,12 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Timeout  int
+}
+
+type NodeConfig struct {
+	ChainId       string
+	Endpoint      string
+	CoinType      uint64
+	PrefixAddress string
+	TokenSymbol   string
 }

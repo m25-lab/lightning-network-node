@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package channel;
 
-option go_package = "github.com/m25-lab/lightning-network-node/pb";
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 service ChannelService {
     rpc OpenChannel (OpenChannelRequest) returns (OpenChannelResponse) {}
@@ -12,12 +12,10 @@ service ChannelService {
 }
 
 message OpenChannelRequest {
-    string accountA = 1;
-    string accountB = 2;
-    uint64 amountA = 3;
-    uint64 amountB = 4;
-    string accountChannel = 5;
-    uint32 sequence = 6;
+    string fromAddress = 1;
+    string toAddress = 2;
+    string signature = 3;
+    string payload = 4;
 }
 
 message OpenChannelResponse {
@@ -25,13 +23,15 @@ message OpenChannelResponse {
 }
 
 message CreateCommitmentRequest {
-    string accountFrom = 1;
-    uint64 amountA = 2;
-    string toAHashlock = 3;
-    string hashCode = 4;
-    string toBHashlock = 5;
-    string blockHeight = 6;
-    uint64 coinLock = 7;
+    string channelId = 1;
+    string fromAddress = 2;
+    string fromHashCode = 3;
+    string fromPayload = 4;
+    string fromSignature = 5;
+    string toAddress = 6;
+    string toHashcode = 7;
+    string toPayload = 8;
+    string toSignature = 9;
 }
 
 message CreateCommitmentResponse {

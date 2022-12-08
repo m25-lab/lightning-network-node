@@ -3,7 +3,6 @@ module github.com/m25-lab/lightning-network-node
 go 1.18
 
 require (
-	github.com/AstraProtocol/astra-go-sdk v0.0.6
 	github.com/AstraProtocol/astra/v2 v2.1.3
 	github.com/AstraProtocol/channel v0.0.8
 	github.com/cosmos/cosmos-sdk v0.45.9
@@ -155,7 +154,6 @@ require (
 
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
-	github.com/AstraProtocol/astra-go-sdk => /Users/kdimo2108/Workspace/University/thesis/astra-go-sdk
 	github.com/AstraProtocol/astra/v2 => github.com/hoanguyenkh/astra/v2 v2.2.1-rc
 	github.com/evmos/evmos/v6 => github.com/AstraProtocol/evmos/v6 v6.1.3-astra
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1

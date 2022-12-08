@@ -3,3 +3,10 @@ database:
   user: "admin"
   password: "8dEEFgSldfSerTHO"
   timeout: 10
+
+node:
+  chainId: "channel"
+  endpoint: "http://0.0.0.0:26657"
+  coinType: 60
+  prefixAddress: "cosmos"
+  tokenSymbol: "token"

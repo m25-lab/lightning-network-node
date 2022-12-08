@@ -12,32 +12,34 @@ import (
 	"github.com/m25-lab/lightning-network-node/internal/account"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
+	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
-	coinType      uint32
-	prefixAddress string
-	tokenSymbol   string
-	rpcClient     sdkClient.Context
+	coinType         uint32
+	prefixAddress    string
+	tokenSymbol      string
+	rpcLightningNode RpcLightningNode
+	rpcClient        sdkClient.Context
 }
 
 type Config struct {
-	ChainId       string `json:"chain_id,omitempty"`
-	Endpoint      string `json:"endpoint,omitempty"`
-	CoinType      uint32 `json:"coin_type,omitempty"`
-	PrefixAddress string `json:"prefix_address,omitempty"`
-	TokenSymbol   string `json:"token_symbol,omitempty"`
+	ChainId               string `json:"chain_id,omitempty"`
+	Endpoint              string `json:"endpoint,omitempty"`
+	CoinType              uint32 `json:"coin_type,omitempty"`
+	PrefixAddress         string `json:"prefix_address,omitempty"`
+	TokenSymbol           string `json:"token_symbol,omitempty"`
+	LightningNodeEndpoint string `json:"lightning_node_endpoint,omitempty"`
 }
 
-func NewClient() *Client {
-	cfg := &Config{
-		ChainId:       "channel",
-		Endpoint:      "http://0.0.0.0:26657",
-		CoinType:      60,
-		PrefixAddress: "cosmos",
-		TokenSymbol:   "token",
-	}
-	fmt.Println(cfg)
+type RpcLightningNode struct {
+	nodeInfo pb.NodeServiceClient
+	channel  pb.ChannelServiceClient
+}
+
+func NewClient(cfg *Config) *Client {
 	client := new(Client)
 	client.Init(cfg)
 	return client
@@ -94,6 +96,16 @@ func (c *Client) Init(cfg *Config) {
 		WithBroadcastMode(flags.BroadcastSync)
 
 	c.rpcClient = rpcClient
+
+	conn, err := grpc.Dial(cfg.LightningNodeEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	c.rpcLightningNode = RpcLightningNode{
+		nodeInfo: pb.NewNodeServiceClient(conn),
+		channel:  pb.NewChannelServiceClient(conn),
+	}
 }
 
 func (c *Client) NewAccountClient() *account.Account {

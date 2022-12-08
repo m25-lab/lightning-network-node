@@ -11,7 +11,8 @@ import (
 )
 
 type MongoDB struct {
-	Client *mongo.Client
+	Client            *mongo.Client
+	ChannelCollection *mongo.Collection
 }
 
 func Connect(configs *config.DatabaseConfig) (*MongoDB, error) {
@@ -24,5 +25,10 @@ func Connect(configs *config.DatabaseConfig) (*MongoDB, error) {
 		return nil, err
 	}
 
-	return &MongoDB{client}, nil
+	database := client.Database("testing")
+
+	return &MongoDB{
+		client,
+		database.Collection("channels"),
+	}, nil
 }

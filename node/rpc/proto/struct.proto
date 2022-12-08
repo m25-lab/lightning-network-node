@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/m25-lab/lightning-network-node/pb";
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 message Peer {
   string addr = 1;

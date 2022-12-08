@@ -1,25 +1,37 @@
 package client
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 	"github.com/m25-lab/lightning-network-node/internal/common"
+	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 	"math"
 	"math/big"
 )
 
 func OpenChannelFromA() {
-	c := NewClient()
+	cfg := &Config{
+		ChainId:               "channel",
+		Endpoint:              "http://0.0.0.0:26657",
+		LightningNodeEndpoint: "0.0.0.0:2525",
+		CoinType:              60,
+		PrefixAddress:         "cosmos",
+		TokenSymbol:           "token",
+	}
+
+	c := NewClient(cfg)
 	acc := c.NewAccountClient()
 	AAccount, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
 	BAccount, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
 	fmt.Println("account A:", AAccount.AccAddress().String())
 	fmt.Println("account B:", BAccount.AccAddress().String())
 	fmt.Println("PrivateKey", AAccount.PrivateKeyToString())
-	fmt.Println("ÏÏPublicKey", AAccount.PublicKey())
+	fmt.Println("PublicKey", AAccount.PublicKey())
 
 	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 	transfer(c, AAccount.PrivateKeyToString(), multisigAddr)
@@ -59,6 +71,17 @@ func OpenChannelFromA() {
 	txJSON := string(txJSONBytes)
 	fmt.Println(txJSON, strSig)
 
+	strOpenChannelRequest, _ := json.Marshal(openChannelRequest)
+
+	response, _ := c.rpcLightningNode.channel.OpenChannel(
+		context.Background(),
+		&pb.OpenChannelRequest{
+			FromAddress: AAccount.AccAddress().String(),
+			ToAddress:   multisigAddr,
+			Signature:   strSig,
+			Payload:     string(strOpenChannelRequest),
+		})
+	fmt.Println(response)
 }
 
 func transfer(c *Client, privateKey string, toAddress string) {

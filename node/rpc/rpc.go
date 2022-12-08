@@ -2,13 +2,13 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	nodeInfoServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/node-info"
 	"net"
 
 	"github.com/m25-lab/lightning-network-node/node"
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
-	"github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
 	channelServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
-	p2pserver "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/p2p"
+	p2pServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/p2p"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -20,8 +20,9 @@ type RPCServer struct {
 }
 
 type ServiceServers struct {
-	p2pServer     *p2pserver.PeerToPeerServer
-	channelServer *channel.ChannelServer
+	p2pServer      *p2pServer.PeerToPeerServer
+	channelServer  *channelServer.ChannelServer
+	nodeInfoServer *nodeInfoServer.NodeInfoServer
 }
 
 func New(node *node.LightningNode) (*RPCServer, error) {
@@ -29,12 +30,17 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	var rpcServer RPCServer
 
 	//Init service servers
-	rpcServer.serviceServers.p2pServer, err = p2pserver.New(node)
+	rpcServer.serviceServers.p2pServer, err = p2pServer.New(node)
 	if err != nil {
 		return nil, err
 	}
 
-	rpcServer.serviceServers.channelServer, err = channelServer.New()
+	rpcServer.serviceServers.channelServer, err = channelServer.New(node)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcServer.serviceServers.nodeInfoServer, err = nodeInfoServer.New(node)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +50,7 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	//Register service servers
 	pb.RegisterPeerToPeerServer(rpcServer.grpcServer, rpcServer.serviceServers.p2pServer)
 	pb.RegisterChannelServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.channelServer)
+	pb.RegisterNodeServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.nodeInfoServer)
 
 	reflection.Register(rpcServer.grpcServer)
 

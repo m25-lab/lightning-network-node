@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package node;
+
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
+
+service NodeService {
+    rpc NodeInfo (NodeInfoRequest) returns (NodeInfoResponse) {}
+}
+
+message NodeInfoRequest {
+}
+
+message NodeInfoResponse {
+    string chainId = 1 ;
+    string endpoint = 2;
+    uint64 coinType = 3;
+    string prefixAddress = 4;
+    string tokenSymbol =5;
+}
+

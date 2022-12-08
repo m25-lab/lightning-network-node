@@ -5,7 +5,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 )
 
-// A channel will be connect two node with one of them is our node.
+// A channel will be connect two node-info with one of them is our node-info.
 type Channel struct {
 	Address    Address
 	Peers      [2]peer.Peer

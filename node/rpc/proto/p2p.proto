@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package p2p;
 
-import "node/rpc/proto/struct.proto";
+import "struct.proto";
 
-option go_package = "github.com/m25-lab/lightning-network-node/pb";
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 service PeerToPeer {
   rpc Connect(ConnectRequest) returns (ConnectResponse) {}

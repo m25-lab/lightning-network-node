@@ -2,9 +2,10 @@ package rpc
 
 import (
 	"fmt"
+	"net"
+
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 	nodeInfoServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/node-info"
-	"net"
 
 	"github.com/m25-lab/lightning-network-node/node"
 	channelServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"

@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/m25-lab/lightning-network-node/node/p2p/peer"
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
 // A channel will be connect two node-info with one of them is our node-info.

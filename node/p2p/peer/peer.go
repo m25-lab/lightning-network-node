@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/m25-lab/lightning-network-node/node/p2p"
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
 type Peer struct {

@@ -2,7 +2,13 @@ package common
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"math"
+	"math/big"
+	"strconv"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -12,9 +18,6 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto/tmhash"
-	"math"
-	"math/big"
-	"strconv"
 )
 
 func DecodePublicKey(rpcClient client.Context, pkJSON string) (cryptoTypes.PubKey, error) {
@@ -157,4 +160,10 @@ func ConvertToDecimal(amount string, decimal int) (float64, error) {
 	}
 
 	return convert, nil
+}
+
+func ToHashCode(secret string) string {
+	hash := sha256.Sum256([]byte(secret))
+	hashEncode := base64.StdEncoding.EncodeToString(hash[:])
+	return hashEncode
 }

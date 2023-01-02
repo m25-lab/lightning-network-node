@@ -4,16 +4,93 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/big"
+
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 	"github.com/m25-lab/lightning-network-node/internal/common"
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
-	"math"
-	"math/big"
 )
+
+func createCommitmentFromA() {
+	cfg := &Config{
+		ChainId:               "channel",
+		Endpoint:              "http://0.0.0.0:26657",
+		LightningNodeEndpoint: "0.0.0.0:2525",
+		CoinType:              60,
+		PrefixAddress:         "cosmos",
+		TokenSymbol:           "token",
+	}
+
+	c := NewClient(cfg)
+	acc := c.NewAccountClient()
+	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
+	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+
+	partACommitment := channelTypes.MsgCommitment{
+		ChannelID:      c.RpcClient().ChainID,
+		Creator:        multisigAddr,
+		From:           multisigAddr,
+		Timelock:       10,
+		ToTimelockAddr: BAccount.AccAddress().String(),
+		CoinToCreator: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(50),
+		},
+		ToHashlockAddr: AAccount.AccAddress().String(),
+		Hashcode:       common.ToHashCode("Part B supper secret"),
+		CoinToHtlc: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(70),
+		},
+	}
+
+	commitmentA := channel.SignMsgRequest{
+		Msg:      &partACommitment,
+		GasLimit: 200000,
+		GasPrice: "0token",
+	}
+
+	channelClient := c.NewChannelClient()
+
+	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
+	if err != nil {
+		panic(err)
+	}
+
+	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
+
+	for _, sig := range sigs {
+
+		if !sig.PubKey.Equals(AAccount.PublicKey()) {
+			fmt.Errorf("Incorrect signer pubkey")
+		}
+
+		sigAddr := types.AccAddress(multiSigPubkey.Address())
+		accNum, accSeq, err := c.RpcClient().AccountRetriever.GetAccountNumberSequence(c.RpcClient(), sigAddr)
+		if err != nil {
+			fmt.Println(err)
+		}
+		signerData := authsigning.SignerData{
+			ChainID:       c.RpcClient().ChainID,
+			AccountNumber: accNum,
+			Sequence:      accSeq,
+		}
+
+		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
+		fmt.Println(tx.GetMsgs())
+		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
 
 func OpenChannelFromA() string {
 	cfg := &Config{
@@ -27,8 +104,9 @@ func OpenChannelFromA() string {
 
 	c := NewClient(cfg)
 	acc := c.NewAccountClient()
-	AAccount, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
-	BAccount, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
+	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
+	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
+
 	fmt.Println("account A:", AAccount.AccAddress().String())
 	fmt.Println("account B:", BAccount.AccAddress().String())
 	fmt.Println("PrivateKey", AAccount.PrivateKeyToString())
@@ -99,8 +177,8 @@ func OpenChannelFromB(channelId string) {
 	acc := c.NewAccountClient()
 	channelClient := c.NewChannelClient()
 
-	AAccount, _ := acc.ImportAccount("series divide ripple fire person prepare meat smooth source scrap poet quit shoulder choice leaf friend pact fault toddler simple quit popular define jar")
-	BAccount, _ := acc.ImportAccount("perfect hello crystal august lake giant dutch random season onion acid stable edge reform deposit capable family glow air elegant copper punch student runway")
+	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
+	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
 
 	channelResult, _ := c.rpcLightningNode.channel.GetChannelById(context.Background(), &pb.GetChannelRequest{Id: channelId})
 

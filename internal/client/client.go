@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/AstraProtocol/astra/v2/app"
 	sdkClient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"

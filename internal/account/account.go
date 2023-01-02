@@ -23,8 +23,7 @@ func NewAccount(coinType uint32) *Account {
 	return &Account{coinType: coinType}
 }
 
-//Create new an Account
-
+// Create new an Account
 func (a *Account) CreateAccount() (*PrivateKeySerialized, error) {
 	mnemonicEntropySize := 256
 	entropySeed, err := bip39.NewEntropy(mnemonicEntropySize)

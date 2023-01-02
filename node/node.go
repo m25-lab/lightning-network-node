@@ -5,8 +5,8 @@ import (
 	"net"
 
 	"github.com/m25-lab/lightning-network-node/config"
+	"github.com/m25-lab/lightning-network-node/database/mongodb"
 	"github.com/m25-lab/lightning-network-node/node/core"
-	"github.com/m25-lab/lightning-network-node/node/database/mongodb"
 	"github.com/m25-lab/lightning-network-node/node/p2p/peer"
 )
 

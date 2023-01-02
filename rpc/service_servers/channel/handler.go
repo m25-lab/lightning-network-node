@@ -2,10 +2,11 @@ package channel
 
 import (
 	"context"
-	"github.com/m25-lab/lightning-network-node/node/database/mongodb/model"
+	"time"
+
+	"github.com/m25-lab/lightning-network-node/database/mongodb/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 
 	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
 )
@@ -50,6 +51,7 @@ func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRe
 	if err != nil {
 		return &pb.GetChannelResponse{}, err
 	}
+
 	if err := c.Node.Database.ChannelCollection.FindOne(
 		ctx,
 		bson.M{

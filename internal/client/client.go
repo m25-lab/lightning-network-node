@@ -13,7 +13,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/internal/account"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

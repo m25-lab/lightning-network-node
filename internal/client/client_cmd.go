@@ -14,11 +14,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 	"github.com/m25-lab/lightning-network-node/internal/common"
-<<<<<<< HEAD
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
-=======
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
->>>>>>> 5fd229f709f15ef600276e1ea627fc087cdcd826
 )
 
 func createCommitmentFromA() {

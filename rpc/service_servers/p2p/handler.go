@@ -3,7 +3,7 @@ package p2pserver
 import (
 	"context"
 
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	"google.golang.org/grpc/peer"
 )
 

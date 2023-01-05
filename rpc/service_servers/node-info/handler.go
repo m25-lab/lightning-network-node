@@ -3,7 +3,7 @@ package nodeInfo
 import (
 	"context"
 
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
 type NodeInfoGrpcHandler struct {

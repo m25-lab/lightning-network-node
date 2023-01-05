@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
-	nodeInfoServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/node-info"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
+	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/node-info"
 
 	"github.com/m25-lab/lightning-network-node/node"
-	channelServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/channel"
-	p2pServer "github.com/m25-lab/lightning-network-node/node/rpc/service-servers/p2p"
+	channelServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/channel"
+	p2pServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/p2p"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

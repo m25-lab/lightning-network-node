@@ -5,29 +5,40 @@ import (
 	"net"
 
 	"github.com/m25-lab/lightning-network-node/config"
-	"github.com/m25-lab/lightning-network-node/database/mongodb"
+	"github.com/m25-lab/lightning-network-node/database/driver"
+	"github.com/m25-lab/lightning-network-node/database/repo_implement/mongo_repo_impl"
+	"github.com/m25-lab/lightning-network-node/database/repository"
 	"github.com/m25-lab/lightning-network-node/node/core"
 	"github.com/m25-lab/lightning-network-node/node/p2p/peer"
 )
 
 type LightningNode struct {
 	Config          *config.Config
-	Database        *mongodb.MongoDB
+	Database        *driver.MongoDB
+	Repository      *Repository
 	ListPeer        peer.ListPeer
 	ListOpenChannel core.ListChannel
 }
 
+type Repository struct {
+	Commitment repository.CommitmentRepo
+}
+
 func New(config *config.Config) (*LightningNode, error) {
-	database, err := mongodb.Connect(&config.Database)
+	database, err := driver.Connect(&config.Database)
 	if err != nil {
 		return nil, err
 	}
 
+	repository := &Repository{}
+	repository.Commitment = mongo_repo_impl.NewCommitmentRepo(database.Client.Database(config.Database.Dbname))
+
 	node := &LightningNode{
-		Config:          config,
-		Database:        database,
-		ListPeer:        peer.ListPeer{},
-		ListOpenChannel: core.ListChannel{},
+		config,
+		database,
+		repository,
+		peer.ListPeer{},
+		core.ListChannel{},
 	}
 
 	return node, nil

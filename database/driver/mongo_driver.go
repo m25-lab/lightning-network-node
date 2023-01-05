@@ -1,4 +1,4 @@
-package mongodb
+package driver
 
 import (
 	"context"
@@ -11,8 +11,9 @@ import (
 )
 
 type MongoDB struct {
-	Client            *mongo.Client
-	ChannelCollection *mongo.Collection
+	Client               *mongo.Client
+	ChannelCollection    *mongo.Collection
+	CommitmentCollection *mongo.Collection
 }
 
 func Connect(configs *config.DatabaseConfig) (*MongoDB, error) {
@@ -30,5 +31,6 @@ func Connect(configs *config.DatabaseConfig) (*MongoDB, error) {
 	return &MongoDB{
 		client,
 		database.Collection("channels"),
+		database.Collection("commitments"),
 	}, nil
 }

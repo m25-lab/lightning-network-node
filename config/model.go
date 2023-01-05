@@ -10,6 +10,7 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Timeout  int
+	Dbname   string
 }
 
 type NodeConfig struct {

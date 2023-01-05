@@ -15,6 +15,7 @@ func LoadConfig() (Config, error) {
 
 	//Default values
 	viper.SetDefault("database.timeout", 10*time.Second)
+	viper.SetDefault("database.dbname", "testing")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return Config{}, err

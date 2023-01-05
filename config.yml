@@ -3,6 +3,7 @@ database:
   user: "admin"
   password: "8dEEFgSldfSerTHO"
   timeout: 10
+  dbname: "testing"
 
 node:
   chainId: "channel"

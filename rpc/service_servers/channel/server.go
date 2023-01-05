@@ -2,7 +2,7 @@ package channel
 
 import (
 	"github.com/m25-lab/lightning-network-node/node"
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
 type ChannelServer struct {

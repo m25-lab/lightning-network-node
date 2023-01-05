@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/m25-lab/lightning-network-node/database/mongodb/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/m25-lab/lightning-network-node/node/rpc/pb"
+	"github.com/m25-lab/lightning-network-node/database/models"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
 type ChannelGrpcHandler struct {
@@ -23,7 +23,7 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 		}, nil
 	}
 
-	openChannelRequest := model.OpenChannelRequest{
+	openChannelRequest := models.OpenChannelRequest{
 		ID:          primitive.NewObjectID(),
 		Status:      "pending",
 		FromAddress: req.FromAddress,
@@ -46,7 +46,7 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 }
 
 func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRequest) (*pb.GetChannelResponse, error) {
-	var channelResult model.OpenChannelRequest
+	var channelResult models.OpenChannelRequest
 	objectId, err := primitive.ObjectIDFromHex(req.Id)
 	if err != nil {
 		return &pb.GetChannelResponse{}, err

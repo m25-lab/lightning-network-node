@@ -73,9 +73,25 @@ func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRe
 }
 
 func (c *ChannelServer) CreateCommitment(ctx context.Context, req *pb.CreateCommitmentRequest) (*pb.CreateCommitmentResponse, error) {
-	// return nil, status.Errorf(codes.NotFound, "method CreateCommitment not implemented")
+	commitmentRequest := &models.Commitment{
+		ID:          primitive.NewObjectID().String(),
+		ChannelID:   req.ChannelId,
+		FromAddress: req.FromAddress,
+		Payload:     req.Payload,
+		Signature:   req.Signature,
+		CreatedAt:   primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
+		UpdatedAt:   primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
+	}
+
+	err := c.Node.Repository.Commitment.Insert(context.Background(), commitmentRequest)
+	if err != nil {
+		return &pb.CreateCommitmentResponse{
+			Response: err.Error(),
+		}, nil
+	}
+
 	return &pb.CreateCommitmentResponse{
-		Response: "Create Commitment",
+		Response: commitmentRequest.ID,
 	}, nil
 }
 

@@ -5,6 +5,9 @@ import (
 )
 
 func main() {
-	channelId := client.OpenChannelFromA()
-	client.OpenChannelFromB(channelId)
+	// channelId := client.OpenChannelFromA()
+	// client.OpenChannelFromB(channelId)
+
+	partACommitment, signature := client.CreateCommitmentFromA()
+	client.CreateCommitmentFromB(partACommitment, signature)
 }

@@ -6,22 +6,18 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"time"
 
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 	"github.com/m25-lab/lightning-network-node/internal/common"
-	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func CreateCommitmentFromA() {
+func CreateCommitmentFromA() (channelTypes.MsgCommitment, string) {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -63,16 +59,47 @@ func CreateCommitmentFromA() {
 
 	channelClient := c.NewChannelClient()
 
-	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
+	_, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}
 
-	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
+	return partACommitment, strSig
+}
 
+func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aSignature string) (channelTypes.MsgCommitment, string) {
+	cfg := &Config{
+		ChainId:               "channel",
+		Endpoint:              "http://0.0.0.0:26657",
+		LightningNodeEndpoint: "0.0.0.0:2525",
+		CoinType:              60,
+		PrefixAddress:         "cosmos",
+		TokenSymbol:           "token",
+	}
+
+	c := NewClient(cfg)
+	channelClient := c.NewChannelClient()
+
+	acc := c.NewAccountClient()
+	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
+	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
+
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+
+	// @Description: Check if the signature is correct
+	commitmentA := channel.SignMsgRequest{
+		Msg:      &partACommitment,
+		GasLimit: 200000,
+		GasPrice: "0token",
+	}
+	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
+	if err != nil {
+		panic(err)
+	}
+	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
 	for _, sig := range sigs {
 
-		if !sig.PubKey.Equals(AAccount.PublicKey()) {
+		if sig.PubKey.Address().String() == AAccount.AccAddress().String() {
 			fmt.Errorf("Incorrect signer pubkey")
 		}
 
@@ -88,31 +115,51 @@ func CreateCommitmentFromA() {
 		}
 
 		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
-		fmt.Println(tx.GetMsgs())
-		fmt.Println(strSig)
 		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
 
-	commitment := &models.Commitment{
-		ID:            "dafsfadfa",
-		ChannelID:     "adfadsf",
-		Status:        "1",
-		FromAddress:   "a",
-		FromHashcode:  "aa",
-		FromPayload:   nil,
-		FromSignature: "aaa",
-		ToAddress:     "b",
-		ToHashcode:    "bb",
-		ToPayload:     nil,
-		ToSignature:   "bbb",
-		CreatedAt:     primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
-		UpdatedAt:     primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
+	strACommitment, _ := json.Marshal(commitmentA)
+
+	// @Description: Save commitment A
+	response, err := c.rpcLightningNode.channel.CreateCommitment(
+		context.Background(),
+		&pb.CreateCommitmentRequest{
+			ChannelId:   partACommitment.ChannelID,
+			FromAddress: partACommitment.From,
+			ToAddress:   partACommitment.ToHashlockAddr,
+			Payload:     string(strACommitment),
+			Signature:   aSignature,
+		},
+	)
+	fmt.Println(response, err)
+
+	// @Description: Create commitment B
+	partBCommitment := channelTypes.MsgCommitment{
+		ChannelID:      c.RpcClient().ChainID,
+		Creator:        multisigAddr,
+		From:           multisigAddr,
+		Timelock:       partACommitment.Timelock,
+		ToTimelockAddr: partACommitment.ToHashlockAddr,
+		CoinToCreator:  partACommitment.CoinToHtlc,
+		ToHashlockAddr: partACommitment.ToTimelockAddr,
+		Hashcode:       common.ToHashCode("Part B supper secret"),
+		CoinToHtlc:     partACommitment.CoinToCreator,
 	}
-	err = node.Repository.Commitment.Insert(context.Background(), commitment)
-	fmt.Println(err)
+
+	// @Description: Sign commitment B
+
+	commitmentB := channel.SignMsgRequest{
+		Msg:      &partBCommitment,
+		GasLimit: 200000,
+		GasPrice: "0token",
+	}
+
+	_, strSig, err = channelClient.CreateMultisigMsg(commitmentB, BAccount, multiSigPubkey)
+
+	return partBCommitment, strSig
 }
 
 func OpenChannelFromA() string {

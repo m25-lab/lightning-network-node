@@ -27,13 +27,9 @@ message OpenChannelResponse {
 message CreateCommitmentRequest {
     string channelId = 1;
     string fromAddress = 2;
-    string fromHashCode = 3;
-    string fromPayload = 4;
-    string fromSignature = 5;
-    string toAddress = 6;
-    string toHashcode = 7;
-    string toPayload = 8;
-    string toSignature = 9;
+    string toAddress = 3;
+    string payload = 4;
+    string signature = 5;
 }
 
 message CreateCommitmentResponse {

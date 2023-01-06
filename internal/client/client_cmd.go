@@ -6,18 +6,22 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"time"
 
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/internal/bank"
 	"github.com/m25-lab/lightning-network-node/internal/channel"
 	"github.com/m25-lab/lightning-network-node/internal/common"
+	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func createCommitmentFromA() {
+func CreateCommitmentFromA() {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -29,8 +33,8 @@ func createCommitmentFromA() {
 
 	c := NewClient(cfg)
 	acc := c.NewAccountClient()
-	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
-	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
+	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
+	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 
 	partACommitment := channelTypes.MsgCommitment{
@@ -85,11 +89,30 @@ func createCommitmentFromA() {
 
 		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
 		fmt.Println(tx.GetMsgs())
+		fmt.Println(strSig)
 		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
+
+	commitment := &models.Commitment{
+		ID:            "dafsfadfa",
+		ChannelID:     "adfadsf",
+		Status:        "1",
+		FromAddress:   "a",
+		FromHashcode:  "aa",
+		FromPayload:   nil,
+		FromSignature: "aaa",
+		ToAddress:     "b",
+		ToHashcode:    "bb",
+		ToPayload:     nil,
+		ToSignature:   "bbb",
+		CreatedAt:     primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
+		UpdatedAt:     primitive.Timestamp{T: uint32(time.Now().Unix()), I: 0},
+	}
+	err = node.Repository.Commitment.Insert(context.Background(), commitment)
+	fmt.Println(err)
 }
 
 func OpenChannelFromA() string {
@@ -104,8 +127,8 @@ func OpenChannelFromA() string {
 
 	c := NewClient(cfg)
 	acc := c.NewAccountClient()
-	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
-	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
+	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
+	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 
 	fmt.Println("account A:", AAccount.AccAddress().String())
 	fmt.Println("account B:", BAccount.AccAddress().String())
@@ -177,8 +200,8 @@ func OpenChannelFromB(channelId string) {
 	acc := c.NewAccountClient()
 	channelClient := c.NewChannelClient()
 
-	AAccount, _ := acc.ImportAccount("change team tag brief sheriff auction slight marine blue struggle cinnamon endorse visit van breeze afford choose black wage champion critic coil novel better")
-	BAccount, _ := acc.ImportAccount("invest couch dirt seed emotion describe usual hat situate sadness bracket choice impulse desert surround kidney flash jeans roof repair evoke joy junk obscure")
+	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
+	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 
 	channelResult, _ := c.rpcLightningNode.channel.GetChannelById(context.Background(), &pb.GetChannelRequest{Id: channelId})
 

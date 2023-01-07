@@ -17,7 +17,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
-func CreateCommitmentFromA() (channelTypes.MsgCommitment, string) {
+func CreateCommitmentFromA() (channelTypes.MsgCommitment, string, string) {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -64,10 +64,10 @@ func CreateCommitmentFromA() (channelTypes.MsgCommitment, string) {
 		panic(err)
 	}
 
-	return partACommitment, strSig
+	return partACommitment, AAccount.AccAddress().String(), strSig
 }
 
-func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aSignature string) (channelTypes.MsgCommitment, string) {
+func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress string, aSignature string) (channelTypes.MsgCommitment, string, string) {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -128,8 +128,7 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aSignatur
 		context.Background(),
 		&pb.CreateCommitmentRequest{
 			ChannelId:   partACommitment.ChannelID,
-			FromAddress: partACommitment.From,
-			ToAddress:   partACommitment.ToHashlockAddr,
+			FromAddress: aAddress,
 			Payload:     string(strACommitment),
 			Signature:   aSignature,
 		},
@@ -159,7 +158,76 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aSignatur
 
 	_, strSig, err = channelClient.CreateMultisigMsg(commitmentB, BAccount, multiSigPubkey)
 
-	return partBCommitment, strSig
+	return partBCommitment, BAccount.AccAddress().String(), strSig
+}
+
+func StoreCommitmentFromA(partBCommitment channelTypes.MsgCommitment, bAddress string, bSignature string) {
+	cfg := &Config{
+		ChainId:               "channel",
+		Endpoint:              "http://0.0.0.0:26657",
+		LightningNodeEndpoint: "0.0.0.0:2525",
+		CoinType:              60,
+		PrefixAddress:         "cosmos",
+		TokenSymbol:           "token",
+	}
+
+	c := NewClient(cfg)
+	channelClient := c.NewChannelClient()
+
+	acc := c.NewAccountClient()
+	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
+	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
+
+	_, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+
+	// @Description: Check if the signature is correct
+	commitmentB := channel.SignMsgRequest{
+		Msg:      &partBCommitment,
+		GasLimit: 200000,
+		GasPrice: "0token",
+	}
+	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentB, AAccount, multiSigPubkey)
+	if err != nil {
+		panic(err)
+	}
+	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
+	for _, sig := range sigs {
+
+		if sig.PubKey.Address().String() == BAccount.AccAddress().String() {
+			fmt.Errorf("Incorrect signer pubkey")
+		}
+
+		sigAddr := types.AccAddress(multiSigPubkey.Address())
+		accNum, accSeq, err := c.RpcClient().AccountRetriever.GetAccountNumberSequence(c.RpcClient(), sigAddr)
+		if err != nil {
+			fmt.Println(err)
+		}
+		signerData := authsigning.SignerData{
+			ChainID:       c.RpcClient().ChainID,
+			AccountNumber: accNum,
+			Sequence:      accSeq,
+		}
+
+		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
+		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	strACommitment, _ := json.Marshal(commitmentB)
+
+	// @Description: Save commitment B
+	response, err := c.rpcLightningNode.channel.CreateCommitment(
+		context.Background(),
+		&pb.CreateCommitmentRequest{
+			ChannelId:   partBCommitment.ChannelID,
+			FromAddress: bAddress,
+			Payload:     string(strACommitment),
+			Signature:   bSignature,
+		},
+	)
+	fmt.Println(response, err)
 }
 
 func OpenChannelFromA() string {

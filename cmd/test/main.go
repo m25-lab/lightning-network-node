@@ -8,6 +8,7 @@ func main() {
 	// channelId := client.OpenChannelFromA()
 	// client.OpenChannelFromB(channelId)
 
-	partACommitment, signature := client.CreateCommitmentFromA()
-	client.CreateCommitmentFromB(partACommitment, signature)
+	partACommitment, addressA, signature := client.CreateCommitmentFromA()
+	partBCommitment, addressB, signature := client.CreateCommitmentFromB(partACommitment, addressA, signature)
+	client.StoreCommitmentFromA(partBCommitment, addressB, signature)
 }

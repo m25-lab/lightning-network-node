@@ -2,10 +2,11 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	"github.com/m25-lab/lightning-network-node/internal/account"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 
 	keyMultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"

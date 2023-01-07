@@ -16,6 +16,7 @@ type ChannelGrpcHandler struct {
 
 func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequest) (*pb.OpenChannelResponse, error) {
 	var payload interface{}
+
 	err := bson.UnmarshalExtJSON([]byte(req.Payload), true, &payload)
 	if err != nil {
 		return &pb.OpenChannelResponse{
@@ -23,7 +24,7 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 		}, nil
 	}
 
-	openChannelRequest := models.OpenChannelRequest{
+	openChannelRequest := &models.OpenChannelRequest{
 		ID:          primitive.NewObjectID(),
 		Status:      "pending",
 		FromAddress: req.FromAddress,
@@ -32,9 +33,8 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 		Payload:     payload,
 		CreatedAt:   primitive.DateTime(time.Now().UnixMilli()),
 	}
-	_, err = c.Node.Database.ChannelCollection.InsertOne(ctx, openChannelRequest)
 
-	if err != nil {
+	if err = c.Node.Repository.Channel.InsertOpenChannelRequest(ctx, openChannelRequest); err != nil {
 		return &pb.OpenChannelResponse{
 			Response: err.Error(),
 		}, nil
@@ -46,17 +46,11 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 }
 
 func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRequest) (*pb.GetChannelResponse, error) {
-	var channelResult models.OpenChannelRequest
-	objectId, err := primitive.ObjectIDFromHex(req.Id)
-	if err != nil {
-		return &pb.GetChannelResponse{}, err
-	}
+	var channelResult *models.OpenChannelRequest
 
-	if err := c.Node.Database.ChannelCollection.FindOne(
-		ctx,
-		bson.M{
-			"_id": objectId,
-		}).Decode(&channelResult); err != nil {
+	channelResult, err := c.Node.Repository.Channel.FindChannelById(ctx, req.Id)
+	if err != nil {
+		//TODO: Handle error
 	}
 
 	strPayload, _ := bson.MarshalExtJSON(channelResult.Payload, false, false)
@@ -74,7 +68,7 @@ func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRe
 
 func (c *ChannelServer) CreateCommitment(ctx context.Context, req *pb.CreateCommitmentRequest) (*pb.CreateCommitmentResponse, error) {
 	commitmentRequest := &models.Commitment{
-		ID:          primitive.NewObjectID().String(),
+		ID:          primitive.NewObjectID(),
 		ChannelID:   req.ChannelId,
 		FromAddress: req.FromAddress,
 		Payload:     req.Payload,
@@ -91,7 +85,7 @@ func (c *ChannelServer) CreateCommitment(ctx context.Context, req *pb.CreateComm
 	}
 
 	return &pb.CreateCommitmentResponse{
-		Response: commitmentRequest.ID,
+		Response: commitmentRequest.ID.Hex(),
 	}, nil
 }
 

@@ -11,9 +11,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	"github.com/m25-lab/lightning-network-node/internal/bank"
-	"github.com/m25-lab/lightning-network-node/internal/channel"
-	"github.com/m25-lab/lightning-network-node/internal/common"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/bank"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 

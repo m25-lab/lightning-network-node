@@ -7,6 +7,6 @@ import (
 )
 
 type ChannelRepo interface {
-	InsertOpenChannelRequest(context.Context, models.OpenChannelRequest) error
-	FindChannelById(context.Context, string) (models.OpenChannelRequest, error)
+	InsertOpenChannelRequest(context.Context, *models.OpenChannelRequest) error
+	FindChannelById(context.Context, string) (*models.OpenChannelRequest, error)
 }

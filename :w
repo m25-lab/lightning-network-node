@@ -1,0 +1,23 @@
+package mongo_repo_impl
+
+import (
+	"context"
+
+	"github.com/m25-lab/lightning-network-node/database/models"
+	"github.com/m25-lab/lightning-network-node/database/repository"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type ChannelRepoImplMongo struct {
+	Db *mongo.Database
+}
+
+func NewChannelRepo(db *mongo.Database) repository.ChannelRepo {
+	return &ChannelRepoImplMongo{
+		Db: db,
+	}
+}
+
+func InsertOpenChannelRequest(context.Context, *models.OpenChannelRequest) error {
+	return nil
+}

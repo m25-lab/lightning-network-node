@@ -19,18 +19,6 @@ func NewCommitmentRepo(db *mongo.Database) repo.CommitmentRepo {
 	}
 }
 
-func (mongo *CommitmentRepoImplMongo) FindCommitmentById(ctx context.Context, id string) (*models.Commitment, error) {
-	//query commitment
-	commitment := models.Commitment{}
-
-	response := mongo.Db.Collection(Commitment).FindOne(ctx, bson.M{"id": id})
-	if err := response.Decode(&commitment); err != nil {
-		return nil, err
-	}
-
-	return &commitment, nil
-}
-
 func (mongo *CommitmentRepoImplMongo) Insert(ctx context.Context, commitment *models.Commitment) error {
 	bbytes, _ := bson.Marshal(commitment)
 
@@ -40,4 +28,15 @@ func (mongo *CommitmentRepoImplMongo) Insert(ctx context.Context, commitment *mo
 	}
 
 	return nil
+}
+
+func (mongo *CommitmentRepoImplMongo) FindCommitmentById(ctx context.Context, id string) (*models.Commitment, error) {
+	commitment := models.Commitment{}
+
+	response := mongo.Db.Collection(Commitment).FindOne(ctx, bson.M{"id": id})
+	if err := response.Decode(&commitment); err != nil {
+		return nil, err
+	}
+
+	return &commitment, nil
 }

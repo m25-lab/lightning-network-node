@@ -3,6 +3,9 @@ package bank
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -11,13 +14,11 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	emvTypes "github.com/evmos/ethermint/x/evm/types"
-	"github.com/m25-lab/lightning-network-node/internal/account"
-	"github.com/m25-lab/lightning-network-node/internal/common"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"math/big"
-	"strings"
 )
 
 type Bank struct {

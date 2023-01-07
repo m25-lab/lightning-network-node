@@ -2,26 +2,22 @@ package node
 
 import (
 	"context"
-	"net"
 
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/database/driver"
 	"github.com/m25-lab/lightning-network-node/database/repo_implement/mongo_repo_impl"
 	"github.com/m25-lab/lightning-network-node/database/repository"
-	"github.com/m25-lab/lightning-network-node/node/core"
-	"github.com/m25-lab/lightning-network-node/node/p2p/peer"
 )
 
 type LightningNode struct {
-	Config          *config.Config
-	Database        *driver.MongoDB
-	Repository      *Repository
-	ListPeer        peer.ListPeer
-	ListOpenChannel core.ListChannel
+	Config     *config.Config
+	Database   *driver.MongoDB
+	Repository *Repository
 }
 
 type Repository struct {
 	Commitment repository.CommitmentRepo
+	Channel    repository.ChannelRepo
 }
 
 func New(config *config.Config) (*LightningNode, error) {
@@ -32,30 +28,15 @@ func New(config *config.Config) (*LightningNode, error) {
 
 	repository := &Repository{}
 	repository.Commitment = mongo_repo_impl.NewCommitmentRepo(database.Client.Database(config.Database.Dbname))
+	repository.Channel = mongo_repo_impl.NewChannelRepo(database.Client.Database(config.Database.Dbname))
 
 	node := &LightningNode{
 		config,
 		database,
 		repository,
-		peer.ListPeer{},
-		core.ListChannel{},
 	}
 
 	return node, nil
-}
-
-func (node *LightningNode) AddNewPeer(addr net.Addr) error {
-	tcpAddr, err := net.ResolveTCPAddr(addr.Network(), addr.String())
-	if err != nil {
-		return err
-	}
-
-	peer := peer.Peer{
-		Addr: *tcpAddr,
-	}
-	node.ListPeer = append(node.ListPeer, peer)
-
-	return nil
 }
 
 func (node *LightningNode) CleanUp() {

@@ -3,8 +3,8 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type Commitment struct {
-	ID        string `bson:"_id"`
-	ChannelID string `bson:"channel_id"`
+	ID        primitive.ObjectID `bson:"_id, omitempty"`
+	ChannelID string             `bson:"channel_id"`
 	// Status        string              `bson:"status"`
 	FromAddress string `bson:"from_address"`
 	Payload     string `bson:"payload"`

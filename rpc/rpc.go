@@ -5,11 +5,10 @@ import (
 	"net"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
-	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/node-info"
+	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/services/node_info"
 
 	"github.com/m25-lab/lightning-network-node/node"
-	channelServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/channel"
-	p2pServer "github.com/m25-lab/lightning-network-node/rpc/service_servers/p2p"
+	channelServer "github.com/m25-lab/lightning-network-node/rpc/services/channel"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -21,7 +20,6 @@ type RPCServer struct {
 }
 
 type ServiceServers struct {
-	p2pServer      *p2pServer.PeerToPeerServer
 	channelServer  *channelServer.ChannelServer
 	nodeInfoServer *nodeInfoServer.NodeInfoServer
 }
@@ -31,11 +29,6 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	var rpcServer RPCServer
 
 	//Init service servers
-	rpcServer.serviceServers.p2pServer, err = p2pServer.New(node)
-	if err != nil {
-		return nil, err
-	}
-
 	rpcServer.serviceServers.channelServer, err = channelServer.New(node)
 	if err != nil {
 		return nil, err
@@ -49,7 +42,6 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	rpcServer.grpcServer = grpc.NewServer()
 
 	//Register service servers
-	pb.RegisterPeerToPeerServer(rpcServer.grpcServer, rpcServer.serviceServers.p2pServer)
 	pb.RegisterChannelServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.channelServer)
 	pb.RegisterNodeServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.nodeInfoServer)
 

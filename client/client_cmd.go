@@ -17,7 +17,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
-func CreateCommitmentFromA() (channelTypes.MsgCommitment, string, string) {
+func CreateCommitmentFromA(amountA int64, amountB int64, secret string) (channelTypes.MsgCommitment, string, string) {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -41,13 +41,13 @@ func CreateCommitmentFromA() (channelTypes.MsgCommitment, string, string) {
 		ToTimelockAddr: BAccount.AccAddress().String(),
 		CoinToCreator: &types.Coin{
 			Denom:  "token",
-			Amount: types.NewInt(50),
+			Amount: types.NewInt(amountA),
 		},
 		ToHashlockAddr: AAccount.AccAddress().String(),
-		Hashcode:       common.ToHashCode("Part B supper secret"),
+		Hashcode:       common.ToHashCode(secret),
 		CoinToHtlc: &types.Coin{
 			Denom:  "token",
-			Amount: types.NewInt(70),
+			Amount: types.NewInt(60),
 		},
 	}
 
@@ -67,7 +67,7 @@ func CreateCommitmentFromA() (channelTypes.MsgCommitment, string, string) {
 	return partACommitment, AAccount.AccAddress().String(), strSig
 }
 
-func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress string, aSignature string) (channelTypes.MsgCommitment, string, string) {
+func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress string, aSignature string, secret string) (channelTypes.MsgCommitment, string, string) {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -144,7 +144,7 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress 
 		ToTimelockAddr: partACommitment.ToHashlockAddr,
 		CoinToCreator:  partACommitment.CoinToHtlc,
 		ToHashlockAddr: partACommitment.ToTimelockAddr,
-		Hashcode:       common.ToHashCode("Part B supper secret"),
+		Hashcode:       common.ToHashCode(secret),
 		CoinToHtlc:     partACommitment.CoinToCreator,
 	}
 
@@ -230,7 +230,7 @@ func StoreCommitmentFromA(partBCommitment channelTypes.MsgCommitment, bAddress s
 	fmt.Println(response, err)
 }
 
-func OpenChannelFromA() string {
+func OpenChannelFromA(amountA int64, amountB int64) string {
 	cfg := &Config{
 		ChainId:               "channel",
 		Endpoint:              "http://0.0.0.0:26657",
@@ -261,11 +261,11 @@ func OpenChannelFromA() string {
 			BAccount.AccAddress().String(),
 			&types.Coin{
 				Denom:  "token",
-				Amount: types.NewInt(100),
+				Amount: types.NewInt(amountA),
 			},
 			&types.Coin{
 				Denom:  "token",
-				Amount: types.NewInt(100),
+				Amount: types.NewInt(amountB),
 			},
 			multisigAddr,
 			"1",

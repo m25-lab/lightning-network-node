@@ -34,7 +34,7 @@ func (mongo *ChannelRepoImplMongo) FindChannelById(ctx context.Context, id strin
 		return nil, err
 	}
 
-	var channel *models.OpenChannelRequest
+	var channel *models.OpenChannelRequest = new(models.OpenChannelRequest)
 
 	response := mongo.Db.Collection(Channel).FindOne(ctx, bson.M{"_id": objectId})
 	if err := response.Decode(channel); err != nil {

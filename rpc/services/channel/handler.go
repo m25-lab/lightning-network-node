@@ -47,10 +47,9 @@ func (c *ChannelServer) OpenChannel(ctx context.Context, req *pb.OpenChannelRequ
 
 func (c *ChannelServer) GetChannelById(ctx context.Context, req *pb.GetChannelRequest) (*pb.GetChannelResponse, error) {
 	var channelResult *models.OpenChannelRequest
-
 	channelResult, err := c.Node.Repository.Channel.FindChannelById(ctx, req.Id)
 	if err != nil {
-		//TODO: Handle error
+		panic(err)
 	}
 
 	strPayload, _ := bson.MarshalExtJSON(channelResult.Payload, false, false)

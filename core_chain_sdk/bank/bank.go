@@ -218,7 +218,7 @@ func (b *Bank) SignTxWithSignerAddress(param *SignTxWithSignerAddressRequest) (c
 		types.NewCoins(amount),
 	)
 
-	newTx := common.NewTxMulSign(b.rpcClient, acc, param.GasLimit, param.GasPrice, param.SequeNum, param.AccNum)
+	newTx := common.NewMultisigTxBuilder(b.rpcClient, acc, param.GasLimit, param.GasPrice, param.SequeNum, param.AccNum)
 
 	txBuilder, err := newTx.BuildUnsignedTx(msg)
 	if err != nil {
@@ -249,7 +249,7 @@ func (b *Bank) TransferMultiSignRawData(param *TransferMultiSignRequest) (client
 		types.NewCoins(amount),
 	)
 
-	newTx := common.NewTxMulSign(b.rpcClient,
+	newTx := common.NewMultisigTxBuilder(b.rpcClient,
 		nil,
 		param.GasLimit,
 		param.GasPrice,
@@ -261,9 +261,9 @@ func (b *Bank) TransferMultiSignRawData(param *TransferMultiSignRequest) (client
 		return nil, errors.Wrap(err, "BuildUnsignedTx")
 	}
 
-	err = newTx.CreateTxMulSign(txBuilder, mulSignAccPublicKey, param.Sigs)
+	err = newTx.GenerateMultisig(txBuilder, mulSignAccPublicKey, param.Sigs)
 	if err != nil {
-		return nil, errors.Wrap(err, "CreateTxMulSign")
+		return nil, errors.Wrap(err, "GenerateMultisig")
 	}
 
 	return txBuilder, nil

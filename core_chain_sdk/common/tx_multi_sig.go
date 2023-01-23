@@ -23,7 +23,7 @@ type TxMulSign struct {
 	rpcClient        client.Context
 }
 
-func NewTxMulSign(rpcClient client.Context, privateKey *account.PrivateKeySerialized, gasLimit uint64, gasPrice string, sequenNum, accNum uint64) *TxMulSign {
+func NewMultisigTxBuilder(rpcClient client.Context, privateKey *account.PrivateKeySerialized, gasLimit uint64, gasPrice string, sequenNum, accNum uint64) *TxMulSign {
 	txf := tx.Factory{}.
 		WithChainID(rpcClient.ChainID).
 		WithTxConfig(rpcClient.TxConfig).
@@ -132,7 +132,7 @@ func (t *TxMulSign) SignTxWithSignerAddress(txBuilder client.TxBuilder, multiSig
 	return nil
 }
 
-func (t *TxMulSign) CreateTxMulSign(txBuilder client.TxBuilder, multiSignAccPubKey cryptoTypes.PubKey, signOfSigner [][]signing.SignatureV2) error {
+func (t *TxMulSign) GenerateMultisig(txBuilder client.TxBuilder, multiSignAccPubKey cryptoTypes.PubKey, signOfSigner [][]signing.SignatureV2) error {
 	err := t.prepareSignTx(multiSignAccPubKey)
 	if err != nil {
 		return errors.Wrap(err, "prepareSignTx")

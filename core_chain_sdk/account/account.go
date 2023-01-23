@@ -45,7 +45,7 @@ func (a *Account) CreateAccount() (*PrivateKeySerialized, error) {
 	return privKey, nil
 }
 
-func (a *Account) CreateMulSignAccountFromTwoAccount(account1, account2 cryptoTypes.PubKey,
+func (a *Account) CreateMulSigAccountFromTwoAccount(account1, account2 cryptoTypes.PubKey,
 	threshold int) (string, cryptoTypes.PubKey, error) {
 	pks := make([]cryptoTypes.PubKey, 2)
 	pks[0] = account1

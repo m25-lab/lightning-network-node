@@ -26,33 +26,33 @@ func NewChannel(rpcClient client.Context) *Channel {
 	return &Channel{rpcClient}
 }
 
-func (cn *Channel) CreateMultisigMsg(req SignMsgRequest,
+func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	account *account.PrivateKeySerialized,
-	multiSigPubkey cryptoTypes.PubKey) (sdk.Tx, string, error) {
+	multiSigPubkey cryptoTypes.PubKey) (string, error) {
 
 	err := req.Msg.ValidateBasic()
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 
-	newTx := common.NewTxMulSign(cn.rpcClient, account, req.GasLimit, req.GasPrice, 0, 2)
+	newTx := common.NewMultisigTxBuilder(cn.rpcClient, account, req.GasLimit, req.GasPrice, 0, 2)
 	txBuilder, err := newTx.BuildUnsignedTx(req.Msg)
 
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 
 	err = newTx.SignTxWithSignerAddress(txBuilder, multiSigPubkey)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "SignTx")
+		return "", errors.Wrap(err, "SignTx")
 	}
 
 	sign, err := common.TxBuilderSignatureJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "GetSign")
+		return "", errors.Wrap(err, "GetSign")
 	}
 
-	return txBuilder.GetTx().(sdk.Tx), sign, nil
+	return sign, nil
 }
 
 func (cn *Channel) ListChannel() (*channelTypes.QueryAllChannelResponse, error) {

@@ -10,7 +10,6 @@ import (
 	channelTypes "github.com/AstraProtocol/channel/x/channel/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/bank"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
@@ -31,7 +30,7 @@ func CreateCommitmentFromA(amountA int64, amountB int64, secret string) (channel
 	acc := c.NewAccountClient()
 	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
 	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
-	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSigAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 
 	partACommitment := channelTypes.MsgCommitment{
 		ChannelID:      c.RpcClient().ChainID,
@@ -59,7 +58,7 @@ func CreateCommitmentFromA(amountA int64, amountB int64, secret string) (channel
 
 	channelClient := c.NewChannelClient()
 
-	_, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(commitmentA, AAccount, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +83,7 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress 
 	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
 	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 
-	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSigAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 
 	// @Description: Check if the signature is correct
 	commitmentA := channel.SignMsgRequest{
@@ -92,35 +91,6 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress 
 		GasLimit: 200000,
 		GasPrice: "0token",
 	}
-	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentA, AAccount, multiSigPubkey)
-	if err != nil {
-		panic(err)
-	}
-	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
-	for _, sig := range sigs {
-
-		if sig.PubKey.Address().String() == AAccount.AccAddress().String() {
-			fmt.Errorf("Incorrect signer pubkey")
-		}
-
-		sigAddr := types.AccAddress(multiSigPubkey.Address())
-		accNum, accSeq, err := c.RpcClient().AccountRetriever.GetAccountNumberSequence(c.RpcClient(), sigAddr)
-		if err != nil {
-			fmt.Println(err)
-		}
-		signerData := authsigning.SignerData{
-			ChainID:       c.RpcClient().ChainID,
-			AccountNumber: accNum,
-			Sequence:      accSeq,
-		}
-
-		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
-		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-
 	strACommitment, _ := json.Marshal(commitmentA)
 
 	// @Description: Save commitment A
@@ -149,15 +119,16 @@ func CreateCommitmentFromB(partACommitment channelTypes.MsgCommitment, aAddress 
 	}
 
 	// @Description: Sign commitment B
-
 	commitmentB := channel.SignMsgRequest{
 		Msg:      &partBCommitment,
 		GasLimit: 200000,
 		GasPrice: "0token",
 	}
 
-	_, strSig, err = channelClient.CreateMultisigMsg(commitmentB, BAccount, multiSigPubkey)
-
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(commitmentB, BAccount, multiSigPubkey)
+	if err != nil {
+		panic(err)
+	}
 	return partBCommitment, BAccount.AccAddress().String(), strSig
 }
 
@@ -172,50 +143,14 @@ func StoreCommitmentFromA(partBCommitment channelTypes.MsgCommitment, bAddress s
 	}
 
 	c := NewClient(cfg)
-	channelClient := c.NewChannelClient()
 
-	acc := c.NewAccountClient()
-	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
-	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
-
-	_, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
-
-	// @Description: Check if the signature is correct
 	commitmentB := channel.SignMsgRequest{
 		Msg:      &partBCommitment,
 		GasLimit: 200000,
 		GasPrice: "0token",
 	}
-	tx, strSig, err := channelClient.CreateMultisigMsg(commitmentB, AAccount, multiSigPubkey)
-	if err != nil {
-		panic(err)
-	}
-	sigs, _ := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig)
-	for _, sig := range sigs {
 
-		if sig.PubKey.Address().String() == BAccount.AccAddress().String() {
-			fmt.Errorf("Incorrect signer pubkey")
-		}
-
-		sigAddr := types.AccAddress(multiSigPubkey.Address())
-		accNum, accSeq, err := c.RpcClient().AccountRetriever.GetAccountNumberSequence(c.RpcClient(), sigAddr)
-		if err != nil {
-			fmt.Println(err)
-		}
-		signerData := authsigning.SignerData{
-			ChainID:       c.RpcClient().ChainID,
-			AccountNumber: accNum,
-			Sequence:      accSeq,
-		}
-
-		signModeHandler := c.RpcClient().TxConfig.SignModeHandler()
-		err = authsigning.VerifySignature(sig.PubKey, signerData, sig.Data, signModeHandler, tx)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-
-	strACommitment, _ := json.Marshal(commitmentB)
+	strBCommitment, _ := json.Marshal(commitmentB)
 
 	// @Description: Save commitment B
 	response, err := c.rpcLightningNode.channel.CreateCommitment(
@@ -223,7 +158,7 @@ func StoreCommitmentFromA(partBCommitment channelTypes.MsgCommitment, bAddress s
 		&pb.CreateCommitmentRequest{
 			ChannelId:   partBCommitment.ChannelID,
 			FromAddress: bAddress,
-			Payload:     string(strACommitment),
+			Payload:     string(strBCommitment),
 			Signature:   bSignature,
 		},
 	)
@@ -250,7 +185,7 @@ func OpenChannelFromA(amountA int64, amountB int64) string {
 	fmt.Println("PrivateKey", AAccount.PrivateKeyToString())
 	fmt.Println("PublicKey", AAccount.PublicKey())
 
-	multisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+	multisigAddr, multiSigPubkey, _ := acc.CreateMulSigAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 	transfer(c, AAccount.PrivateKeyToString(), multisigAddr)
 	fmt.Println("multisigAddr", multisigAddr)
 
@@ -276,17 +211,10 @@ func OpenChannelFromA(amountA int64, amountB int64) string {
 
 	channelClient := c.NewChannelClient()
 
-	msg, strSig, err := channelClient.CreateMultisigMsg(openChannelRequest, AAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(openChannelRequest, AAccount, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}
-
-	txJSONBytes, err := c.RpcClient().TxConfig.TxJSONEncoder()(msg)
-	if err != nil {
-		panic(err)
-	}
-	txJSON := string(txJSONBytes)
-	fmt.Println(txJSON, strSig)
 
 	strOpenChannelRequest, _ := json.Marshal(openChannelRequest)
 
@@ -329,7 +257,7 @@ func OpenChannelFromB(channelId string) {
 	fmt.Println("payload", channelResult.Payload)
 	json.Unmarshal([]byte(channelResult.Payload), &payload)
 
-	tmpMultisigAddr, multiSigPubkey, _ := acc.CreateMulSignAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
+	tmpMultisigAddr, multiSigPubkey, _ := acc.CreateMulSigAccountFromTwoAccount(AAccount.PublicKey(), BAccount.PublicKey(), 2)
 	fmt.Println("tmpMultisigAddr", tmpMultisigAddr) // astra1747xvksuc7ecpylckzjvmcqvvlmp6t6ujs3lld
 
 	msg := channelTypes.NewMsgOpenChannel(
@@ -352,49 +280,62 @@ func OpenChannelFromB(channelId string) {
 	fmt.Println("openChannelRequest", openChannelRequest)
 
 	signList := make([][]signingTypes.SignatureV2, 0)
-	signByte1, err := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, channelResult.SignatureA)
+
+	// 1. decode signature from A: string -> []byte
+	signByte1, err := common.SignatureJsonDecoder(c.RpcClient().TxConfig, channelResult.SignatureA)
 	if err != nil {
 		panic(err)
 	}
+
+	// 2. append signature to signList
 	signList = append(signList, signByte1)
-	_, strSig2, err := channelClient.CreateMultisigMsg(openChannelRequest, BAccount, multiSigPubkey)
+
+	// 3. create multisignature from B
+	strSig2, err := channelClient.SignMultisigTxFromOneAccount(openChannelRequest, BAccount, multiSigPubkey)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Sig2", strSig2)
 
-	signByte2, err := common.TxBuilderSignatureJsonDecoder(c.RpcClient().TxConfig, strSig2)
+	// 4. decode signature from B: string -> []byte
+	signByte2, err := common.SignatureJsonDecoder(c.RpcClient().TxConfig, strSig2)
 	if err != nil {
 		panic(err)
 	}
 
+	// 5. append signature to signList
 	signList = append(signList, signByte2)
 
 	fmt.Println("new tx multisign")
 
-	newTx := common.NewTxMulSign(c.RpcClient(),
+	// 6. create new transaction with multisignature
+	newTx := common.NewMultisigTxBuilder(c.RpcClient(),
 		nil,
 		openChannelRequest.GasLimit,
 		openChannelRequest.GasPrice,
 		0,
 		2)
 
+	// 7. build unsigned transaction
 	txBuilderMultiSign, err := newTx.BuildUnsignedTx(openChannelRequest.Msg)
 	if err != nil {
 		panic(err)
 	}
 
-	err = newTx.CreateTxMulSign(txBuilderMultiSign, multiSigPubkey, signList)
+	// 8. create multisignature
+	err = newTx.GenerateMultisig(txBuilderMultiSign, multiSigPubkey, signList)
 	if err != nil {
 		panic(err)
 	}
 
+	// 9. encode transaction to json
 	txJson, err := common.TxBuilderJsonEncoder(c.RpcClient().TxConfig, txBuilderMultiSign)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("rawData", string(txJson))
 
+	// 10. decode transaction from json to []byte
 	txByte, err := common.TxBuilderJsonDecoder(c.RpcClient().TxConfig, txJson)
 	if err != nil {
 		panic(err)
@@ -403,6 +344,7 @@ func OpenChannelFromB(channelId string) {
 	txHash := common.TxHash(txByte)
 	fmt.Println("txHash", txHash)
 
+	// 11. broadcast transaction
 	txResult, err := c.RpcClient().BroadcastTxCommit(txByte)
 	if err != nil {
 		panic(err)

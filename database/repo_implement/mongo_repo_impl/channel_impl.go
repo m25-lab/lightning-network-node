@@ -24,7 +24,6 @@ func (mongo *ChannelRepoImplMongo) InsertOpenChannelRequest(ctx context.Context,
 	if _, err := mongo.Db.Collection(Channel).InsertOne(ctx, channel); err != nil {
 		return err
 	}
-
 	return nil
 }
 

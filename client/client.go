@@ -2,122 +2,76 @@ package client
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 
-	"github.com/AstraProtocol/astra/v2/app"
-	sdkClient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/types"
-	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/evmos/ethermint/encoding"
-	ethermintTypes "github.com/evmos/ethermint/types"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/bank"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
-	"github.com/m25-lab/lightning-network-node/rpc/pb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/m25-lab/lightning-network-node/config"
+	"github.com/m25-lab/lightning-network-node/node"
 )
 
 type Client struct {
-	coinType         uint32
-	prefixAddress    string
-	tokenSymbol      string
-	rpcLightningNode RpcLightningNode
-	rpcClient        sdkClient.Context
+	Node   *node.LightningNode
+	Config *config.Config
 }
 
-type Config struct {
-	ChainId               string `json:"chain_id,omitempty"`
-	Endpoint              string `json:"endpoint,omitempty"`
-	CoinType              uint32 `json:"coin_type,omitempty"`
-	PrefixAddress         string `json:"prefix_address,omitempty"`
-	TokenSymbol           string `json:"token_symbol,omitempty"`
-	LightningNodeEndpoint string `json:"lightning_node_endpoint,omitempty"`
+func New(node *node.LightningNode, config *config.Config) (*Client, error) {
+	return &Client{
+		node,
+		config,
+	}, nil
 }
 
-type RpcLightningNode struct {
-	nodeInfo pb.NodeServiceClient
-	messsage pb.MessageServiceClient
-}
-
-func NewClient(cfg *Config) *Client {
-	client := new(Client)
-	client.Init(cfg)
-	return client
-}
-
-func (c *Client) Init(cfg *Config) {
-	c.coinType = cfg.CoinType
-	c.prefixAddress = cfg.PrefixAddress
-	c.tokenSymbol = cfg.TokenSymbol
-
-	sdkConfig := types.GetConfig()
-	sdkConfig.SetPurpose(44)
-
-	switch cfg.CoinType {
-	case 60:
-		sdkConfig.SetCoinType(ethermintTypes.Bip44CoinType)
-	case 118:
-		sdkConfig.SetCoinType(types.CoinType)
-	default:
-		panic("Coin type invalid!")
-	}
-
-	bech32PrefixAccAddr := fmt.Sprintf("%v", c.prefixAddress)
-	bech32PrefixAccPub := fmt.Sprintf("%vpub", c.prefixAddress)
-	bech32PrefixValAddr := fmt.Sprintf("%vvaloper", c.prefixAddress)
-	bech32PrefixValPub := fmt.Sprintf("%vvaloperpub", c.prefixAddress)
-	bech32PrefixConsAddr := fmt.Sprintf("%vvalcons", c.prefixAddress)
-	bech32PrefixConsPub := fmt.Sprintf("%vvalconspub", c.prefixAddress)
-
-	sdkConfig.SetBech32PrefixForAccount(bech32PrefixAccAddr, bech32PrefixAccPub)
-	sdkConfig.SetBech32PrefixForValidator(bech32PrefixValAddr, bech32PrefixValPub)
-	sdkConfig.SetBech32PrefixForConsensusNode(bech32PrefixConsAddr, bech32PrefixConsPub)
-
-	ar := authTypes.AccountRetriever{}
-
-	//github.com/cosmos/cosmos-sdk/simapp/app.go
-	//github.com/evmos/ethermint@v0.19.0/app/app.go -> selected
-	encodingConfig := encoding.MakeConfig(app.ModuleBasics)
-	rpcHttp, err := sdkClient.NewClientFromNode(cfg.Endpoint)
+func (client *Client) RunTelegramBot() error {
+	bot, err := tgbotapi.NewBotAPI(client.Config.Telegram.BotId)
 	if err != nil {
 		panic(err)
 	}
 
-	rpcClient := sdkClient.Context{}
-	rpcClient = rpcClient.
-		WithClient(rpcHttp).
-		//WithNodeURI(c.endpoint).
-		WithCodec(encodingConfig.Marshaler).
-		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-		WithTxConfig(encodingConfig.TxConfig).
-		WithLegacyAmino(encodingConfig.Amino).
-		WithAccountRetriever(ar).
-		WithChainID(cfg.ChainId).
-		WithBroadcastMode(flags.BroadcastSync)
+	bot.Debug = true
 
-	c.rpcClient = rpcClient
+	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	conn, err := grpc.Dial(cfg.LightningNodeEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	updates := bot.GetUpdatesChan(u)
+
+	for update := range updates {
+		if update.Message == nil { // ignore any non-Message updates
+			continue
+		}
+
+		if !update.Message.IsCommand() { // ignore any non-command Messages
+			continue
+		}
+
+		// Create a new MessageConfig. We don't have text yet,
+		// so we leave it empty.
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+
+		// Extract the command from the Message.
+		switch update.Message.Command() {
+		case "create_account":
+			account, err := client.CreateAccount(strconv.FormatInt(update.Message.From.ID, 10))
+			if err != nil {
+				msg.Text = "Error: " + err.Error()
+			} else {
+				msg.Text = fmt.Sprintf("✅ *Account created successfully.* \n 💳 Your address: `%s` \n 🗝️ Your mnemonic: `%s` \n", account.AccAddress().String(), account.Mnemonic())
+			}
+		case "sayhi":
+			msg.Text = "Hi :)"
+		case "status":
+			msg.Text = "I'm ok."
+		default:
+			msg.Text = "I don't know that command"
+		}
+
+		msg.ParseMode = "Markdown"
+		if _, err := bot.Send(msg); err != nil {
+			log.Panic(err)
+		}
 	}
 
-	c.rpcLightningNode = RpcLightningNode{
-		nodeInfo: pb.NewNodeServiceClient(conn),
-		channel:  pb.NewChannelServiceClient(conn),
-	}
-}
-
-func (c *Client) NewAccountClient() *account.Account {
-	return account.NewAccount(c.coinType)
-}
-func (c *Client) NewChannelClient() *channel.Channel {
-	return channel.NewChannel(c.rpcClient)
-}
-func (c *Client) NewBankClient() *bank.Bank {
-	return bank.NewBank(c.rpcClient, c.tokenSymbol, c.coinType)
-}
-func (c *Client) RpcClient() sdkClient.Context {
-	return c.rpcClient
+	return nil
 }

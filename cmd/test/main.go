@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 
-	secp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 )
 
@@ -34,7 +31,7 @@ func main() {
 
 	//get public ke
 
-	acc := account.NewAccount(60)
+	acc := account.NewAccount()
 
 	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
 	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
@@ -43,22 +40,7 @@ func main() {
 	fmt.Println("account B:", BAccount.AccAddress().String())
 	fmt.Println("account A public key:", AAccount.PublicKey().String())
 
-	var pubkey secp256k1.PubKey
-	data, err := hex.DecodeString("02E35D749E46BF716CE2C59525A162D06AC267F98E35CC56F2B8C695DF1AD16E27")
-	if err != nil {
-		panic(err)
-	}
-	pubkey.Key = data
-	fmt.Println(pubkey.String())
-}
-
-func GetPublicKeyFromAddress(address string) {
-	accAddress, err := types.AccAddressFromBech32(address)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	publicKey := accAddress.Bytes()
-	fmt.Println(publicKey)
-
+	newPKAccount := account.NewPKAccount("02E35D749E46BF716CE2C59525A162D06AC267F98E35CC56F2B8C695DF1AD16E27")
+	fmt.Println(newPKAccount.PublicKey().String())
+	fmt.Println(newPKAccount.AccAddress().String())
 }

@@ -9,15 +9,16 @@ service MessageService {
 }
 
 message SendMessageRequest {
-    string action = 1;
+    string message_id = 1;
     string channel_id = 2;
-    string data = 3;
-    string from = 4;
-    string to = 5;
+    string action = 3;
+    string data = 4;
+    string from = 5;
+    string to = 6;
+    string accept_message_id = 7;
 }
 
 message SendMessageResponse {
     string response = 1;
     string error_code = 2;
-    string error_message = 3;
 }

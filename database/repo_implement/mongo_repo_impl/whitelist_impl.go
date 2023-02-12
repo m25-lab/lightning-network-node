@@ -2,7 +2,6 @@ package mongo_repo_impl
 
 import (
 	"context"
-	"sort"
 
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/database/repository"
@@ -21,9 +20,6 @@ func NewWhitelistRepo(db *mongo.Database) repository.WhitelistRepo {
 }
 
 func (mongo *WhitelistRepoImplMongo) InsertOne(ctx context.Context, msg *models.Whitelist) error {
-	//sort address
-	sort.Strings(msg.Users)
-
 	if _, err := mongo.Db.Collection(Whitelist).InsertOne(ctx, msg); err != nil {
 		return err
 	}
@@ -43,7 +39,6 @@ func (mongo *WhitelistRepoImplMongo) FindByMultiAddress(ctx context.Context, add
 
 func (mongo *WhitelistRepoImplMongo) FindByAddresses(ctx context.Context, addresses []string) (*models.Whitelist, error) {
 	whitelist := models.Whitelist{}
-	sort.Strings(addresses)
 
 	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"users": addresses})
 	if err := response.Decode(&whitelist); err != nil {

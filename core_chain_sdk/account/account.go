@@ -19,8 +19,8 @@ type Account struct {
 	coinType uint32
 }
 
-func NewAccount(coinType uint32) *Account {
-	return &Account{coinType: coinType}
+func NewAccount() *Account {
+	return &Account{coinType: 60}
 }
 
 // Create new an Account

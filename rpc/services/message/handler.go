@@ -2,7 +2,6 @@ package message
 
 import (
 	"context"
-	"strings"
 
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
@@ -11,7 +10,13 @@ import (
 
 func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*pb.SendMessageResponse, error) {
 	if (req.Action == "AddWhitelist") && (req.Data == "") {
-
+		err := server.ValidateAddWhitelist(ctx, req)
+		if err != nil {
+			return &pb.SendMessageResponse{
+				Response:  "",
+				ErrorCode: "1000",
+			}, nil
+		}
 	}
 
 	if err := server.Node.Repository.Message.InsertOne(
@@ -21,7 +26,7 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 			ChannelID: req.ChannelId,
 			Action:    req.Action,
 			Data:      req.Data,
-			Users:     strings.Split(req.Users, ","),
+			Users:     []string{req.From, req.To},
 		},
 	); err != nil {
 		return nil, err

@@ -5,4 +5,5 @@ const (
 	Commitment string = "commitments"
 	Message    string = "messages"
 	Whitelist  string = "whitelists"
+	Address    string = "addresses"
 )

@@ -11,3 +11,6 @@ node:
   coinType: 60
   prefixAddress: "cosmos"
   tokenSymbol: "token"
+
+telegram:
+  botId: 6050008901:AAEktP3Fh7N6VIQt_J4WhRuJThhQCYj-hOI

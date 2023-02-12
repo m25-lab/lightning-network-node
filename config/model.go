@@ -3,6 +3,7 @@ package config
 type Config struct {
 	Database DatabaseConfig
 	Node     NodeConfig
+	Telegram Telegram
 }
 
 type DatabaseConfig struct {
@@ -19,4 +20,8 @@ type NodeConfig struct {
 	CoinType      uint64
 	PrefixAddress string
 	TokenSymbol   string
+}
+
+type Telegram struct {
+	BotId string
 }

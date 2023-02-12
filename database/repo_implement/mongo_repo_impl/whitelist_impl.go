@@ -1,0 +1,54 @@
+package mongo_repo_impl
+
+import (
+	"context"
+	"sort"
+
+	"github.com/m25-lab/lightning-network-node/database/models"
+	"github.com/m25-lab/lightning-network-node/database/repository"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type WhitelistRepoImplMongo struct {
+	Db *mongo.Database
+}
+
+func NewWhitelistRepo(db *mongo.Database) repository.WhitelistRepo {
+	return &WhitelistRepoImplMongo{
+		Db: db,
+	}
+}
+
+func (mongo *WhitelistRepoImplMongo) InsertOne(ctx context.Context, msg *models.Whitelist) error {
+	//sort address
+	sort.Strings(msg.Users)
+
+	if _, err := mongo.Db.Collection(Whitelist).InsertOne(ctx, msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mongo *WhitelistRepoImplMongo) FindByMultiAddress(ctx context.Context, address string) (*models.Whitelist, error) {
+	whitelist := models.Whitelist{}
+
+	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"multi_pubkey": address})
+	if err := response.Decode(&whitelist); err != nil {
+		return nil, err
+	}
+
+	return &whitelist, nil
+}
+
+func (mongo *WhitelistRepoImplMongo) FindByAddresses(ctx context.Context, addresses []string) (*models.Whitelist, error) {
+	whitelist := models.Whitelist{}
+	sort.Strings(addresses)
+
+	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"users": addresses})
+	if err := response.Decode(&whitelist); err != nil {
+		return nil, err
+	}
+
+	return &whitelist, nil
+}

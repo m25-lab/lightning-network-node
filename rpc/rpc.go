@@ -8,7 +8,7 @@ import (
 	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/services/node_info"
 
 	"github.com/m25-lab/lightning-network-node/node"
-	channelServer "github.com/m25-lab/lightning-network-node/rpc/services/channel"
+	messageServer "github.com/m25-lab/lightning-network-node/rpc/services/message"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -20,7 +20,7 @@ type RPCServer struct {
 }
 
 type ServiceServers struct {
-	channelServer  *channelServer.ChannelServer
+	messageServer  *messageServer.MessageServer
 	nodeInfoServer *nodeInfoServer.NodeInfoServer
 }
 
@@ -29,7 +29,7 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	var rpcServer RPCServer
 
 	//Init service servers
-	rpcServer.serviceServers.channelServer, err = channelServer.New(node)
+	rpcServer.serviceServers.messageServer, err = messageServer.New(node)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	rpcServer.grpcServer = grpc.NewServer()
 
 	//Register service servers
-	pb.RegisterChannelServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.channelServer)
+	pb.RegisterMessageServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.messageServer)
 	pb.RegisterNodeServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.nodeInfoServer)
 
 	reflection.Register(rpcServer.grpcServer)

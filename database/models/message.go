@@ -9,8 +9,9 @@ const (
 )
 
 type Message struct {
-	ID     primitive.ObjectID `bson:"_id, omitempty"`
-	Action string             `bson:"action"`
-	Data   string             `bson:"data"`
-	Users  []string           `bson:"users"`
+	ID        primitive.ObjectID `bson:"_id, omitempty"`
+	ChannelID string             `bson:"channel_id"`
+	Action    string             `bson:"action"`
+	Data      string             `bson:"data"`
+	Users     []string           `bson:"users"`
 }

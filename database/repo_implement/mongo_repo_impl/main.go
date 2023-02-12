@@ -4,4 +4,5 @@ const (
 	Channel    string = "channels"
 	Commitment string = "commitments"
 	Message    string = "messages"
+	Whitelist  string = "whitelists"
 )

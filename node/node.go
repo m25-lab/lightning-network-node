@@ -18,10 +18,12 @@ type LightningNode struct {
 type Repository struct {
 	Commitment repository.CommitmentRepo
 	Channel    repository.ChannelRepo
+	Message    repository.MessageRepo
+	Whitelist  repository.WhitelistRepo
 }
 
 func New(config *config.Config) (*LightningNode, error) {
-	database, err := driver.Connect(&config.Database)
+	database, err := driver.Connect(context.Background(), &config.Database)
 	if err != nil {
 		return nil, err
 	}

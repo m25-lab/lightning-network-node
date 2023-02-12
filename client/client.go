@@ -37,7 +37,7 @@ type Config struct {
 
 type RpcLightningNode struct {
 	nodeInfo pb.NodeServiceClient
-	channel  pb.ChannelServiceClient
+	messsage pb.MessageServiceClient
 }
 
 func NewClient(cfg *Config) *Client {

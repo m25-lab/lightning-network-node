@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package channel;
+
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
+
+service MessageService {
+    rpc SendMessage (SendMessageRequest) returns (SendMessageResponse) {}
+}
+
+message SendMessageRequest {
+    string action = 1;
+    string channel_id = 2;
+    string data = 3;
+    string from = 4;
+    string to = 5;
+}
+
+message SendMessageResponse {
+    string response = 1;
+    string error_code = 2;
+    string error_message = 3;
+}

@@ -37,3 +37,23 @@ func (mongo *AddressRepoImplMongo) FindByAddress(ctx context.Context, _address s
 
 	return &address, nil
 }
+
+func (mongo *AddressRepoImplMongo) DeleteByClientId(ctx context.Context, clientId string) error {
+	_, err := mongo.Db.Collection(Address).DeleteMany(ctx, bson.M{"client_id": clientId})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (mongo *AddressRepoImplMongo) FindByClientId(ctx context.Context, clientId string) (*models.Address, error) {
+	address := models.Address{}
+
+	response := mongo.Db.Collection(Address).FindOne(ctx, bson.M{"client_id": clientId})
+	if err := response.Decode(&address); err != nil {
+		return nil, err
+	}
+
+	return &address, nil
+}

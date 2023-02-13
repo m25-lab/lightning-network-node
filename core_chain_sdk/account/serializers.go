@@ -3,6 +3,7 @@ package account
 import (
 	"encoding/hex"
 	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codecTypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"

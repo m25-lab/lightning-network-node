@@ -2,6 +2,7 @@ package account
 
 import (
 	"encoding/hex"
+	"strings"
 
 	secp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -13,6 +14,7 @@ type PKAccount struct {
 }
 
 func NewPKAccount(pubkey string) *PKAccount {
+	pubkey = strings.Split(strings.Split(pubkey, "{")[1], "}")[0]
 	key, err := hex.DecodeString(pubkey)
 	if err != nil {
 		panic(err)

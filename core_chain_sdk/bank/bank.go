@@ -80,7 +80,7 @@ func (b *Bank) CheckTx(txHash string) (*types.TxResponse, error) {
 }
 
 func (b *Bank) TransferRawData(param *TransferRequest) (client.TxBuilder, error) {
-	auth := account.NewAccount(b.coinType)
+	auth := account.NewAccount()
 	acc, err := auth.ImportAccount(param.PrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "ImportAccount")
@@ -114,7 +114,7 @@ func (b *Bank) TransferRawData(param *TransferRequest) (client.TxBuilder, error)
 }
 
 func (b *Bank) TransferRawDataAndBroadcast(param *TransferRequest) (*sdk.TxResponse, error) {
-	auth := account.NewAccount(b.coinType)
+	auth := account.NewAccount()
 	acc, err := auth.ImportAccount(param.PrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "ImportAccount")
@@ -165,7 +165,7 @@ func (b *Bank) TransferRawDataAndBroadcast(param *TransferRequest) (*sdk.TxRespo
 }
 
 func (b *Bank) TransferRawDataWithPrivateKey(param *TransferRequest) (client.TxBuilder, error) {
-	auth := account.NewAccount(b.coinType)
+	auth := account.NewAccount()
 	acc, err := auth.ImportPrivateKey(param.PrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "ImportAccount")
@@ -199,7 +199,7 @@ func (b *Bank) TransferRawDataWithPrivateKey(param *TransferRequest) (client.TxB
 }
 
 func (b *Bank) SignTxWithSignerAddress(param *SignTxWithSignerAddressRequest) (client.TxBuilder, error) {
-	auth := account.NewAccount(b.coinType)
+	auth := account.NewAccount()
 	acc, err := auth.ImportAccount(param.SignerPrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "ImportAccount")

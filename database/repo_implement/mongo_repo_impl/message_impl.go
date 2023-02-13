@@ -6,6 +6,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/database/repository"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -29,7 +30,11 @@ func (mongo *MessageRepoImplMongo) InsertOne(ctx context.Context, msg *models.Me
 func (mongo *MessageRepoImplMongo) FindOneById(ctx context.Context, id string) (*models.Message, error) {
 	message := models.Message{}
 
-	response := mongo.Db.Collection(Message).FindOne(ctx, bson.M{"id": id})
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	response := mongo.Db.Collection(Message).FindOne(ctx, bson.M{"_id": oid})
 	if err := response.Decode(&message); err != nil {
 		return nil, err
 	}
@@ -54,4 +59,13 @@ func (mongo *MessageRepoImplMongo) FindMany(ctx context.Context, userId string, 
 	}
 
 	return messages, err
+}
+
+func (mongo *MessageRepoImplMongo) UpdateTelegramChatId(ctx context.Context, id primitive.ObjectID, telegramChatId int) error {
+	_, err := mongo.Db.Collection(Message).UpdateByID(ctx, id, bson.M{"$set": bson.M{"telegram_chat_id": telegramChatId}})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

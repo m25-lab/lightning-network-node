@@ -4,6 +4,7 @@ type Config struct {
 	Database DatabaseConfig
 	Node     NodeConfig
 	Telegram Telegram
+	LNode    LNode
 }
 
 type DatabaseConfig struct {
@@ -24,4 +25,8 @@ type NodeConfig struct {
 
 type Telegram struct {
 	BotId string
+}
+
+type LNode struct {
+	External string
 }

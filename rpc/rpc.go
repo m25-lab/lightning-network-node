@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/m25-lab/lightning-network-node/client"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/services/node_info"
 
@@ -28,8 +29,13 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 	var err error
 	var rpcServer RPCServer
 
+	client, err := client.New(node)
+	if err != nil {
+		return nil, err
+	}
+
 	//Init service servers
-	rpcServer.serviceServers.messageServer, err = messageServer.New(node)
+	rpcServer.serviceServers.messageServer, err = messageServer.New(node, client)
 	if err != nil {
 		return nil, err
 	}

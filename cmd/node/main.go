@@ -38,7 +38,7 @@ func main() {
 	}()
 
 	fmt.Printf("Running Telegram Bot...\n")
-	client, err := client.New(node, &config)
+	client, err := client.New(node)
 	checkErr(err)
 
 	go func() {

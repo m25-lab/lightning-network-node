@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/m25-lab/lightning-network-node/database/models"
@@ -14,6 +15,7 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 	existToAddress, err := server.Node.Repository.Address.FindByAddress(ctx, toAddress)
 
 	if err != nil {
+		fmt.Printf("err: %v", err)
 		return &pb.SendMessageResponse{
 			Response:  "",
 			ErrorCode: "1004",

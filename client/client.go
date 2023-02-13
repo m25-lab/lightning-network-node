@@ -40,47 +40,33 @@ func (client *Client) RunTelegramBot() error {
 	updates := client.Bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.CallbackQuery != nil {
-			flagUpdateTelmsg := false
-			var message *models.Message
+		flagUpdateTelmsg := false
+		var message *models.Message
+		var msg tgbotapi.MessageConfig
 
+		if update.CallbackQuery != nil {
+			msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "")
 			clientId := strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 			if _, err := client.Bot.Request(callback); err != nil {
 				panic(err)
 			}
 
-			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "")
+			action, messageId, _ := client.ParseCallbackData(update.CallbackQuery.Data)
 
-			action, messageId, err := client.ParseCallbackData(update.CallbackQuery.Data)
-			if err != nil {
-				msg.Text = "Error: " + err.Error()
-			} else {
-				switch action {
-				case models.AcceptAddWhitelist:
-					message, err = client.AcceptAddWhitelist(clientId, messageId)
-					if err != nil {
-						msg.Text = "Error: " + err.Error()
-					} else {
-						msg.Text = fmt.Sprintf("✅ *Add whitelist successfully.* \n Add `%s` to whitelist", message.Users[0])
-						flagUpdateTelmsg = true
-					}
+			switch action {
+			case models.AcceptAddWhitelist:
+				var err error
+				message, err = client.AcceptAddWhitelist(clientId, messageId)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("✅ *Add whitelist successfully.* \n Add `%s` to whitelist", message.Users[0])
+					flagUpdateTelmsg = true
 				}
 			}
-
-			msg.ParseMode = "Markdown"
-			telMsg, err := client.Bot.Send(msg)
-			if err != nil {
-				panic(err)
-			}
-			if flagUpdateTelmsg {
-				client.Node.Repository.Message.UpdateTelegramChatId(context.Background(), message.ID, telMsg.MessageID)
-			}
-		} else if update.Message.IsCommand() {
-			flagUpdateTelmsg := false
-			var message *models.Message
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+		} else if update.Message.Text != "" && update.Message.IsCommand() {
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "")
 			clientId := strconv.FormatInt(update.Message.From.ID, 10)
 
 			switch update.Message.Command() {
@@ -118,15 +104,15 @@ func (client *Client) RunTelegramBot() error {
 				msg.Text = "I don't know that command"
 			}
 
-			msg.ParseMode = "Markdown"
-			telMsg, err := client.Bot.Send(msg)
-			if err != nil {
-				log.Panic(err)
-			}
+		}
+		msg.ParseMode = "Markdown"
+		telMsg, err := client.Bot.Send(msg)
+		if err != nil {
+			log.Panic(err)
+		}
 
-			if flagUpdateTelmsg {
-				client.Node.Repository.Message.UpdateTelegramChatId(context.Background(), message.ID, telMsg.MessageID)
-			}
+		if flagUpdateTelmsg {
+			client.Node.Repository.Message.UpdateTelegramChatId(context.Background(), message.ID, telMsg.MessageID)
 		}
 	}
 

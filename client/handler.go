@@ -194,7 +194,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	savedWhitelist := models.Whitelist{
 		ID: primitive.NewObjectID(),
 		Users: []string{
-			fromAccount.AccAddress().String(), toAccount.AccAddress().String(),
+			fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, message.Users[0],
 		},
 		Pubkeys: []string{
 			fromAccount.PublicKey().String(), addWhitelist.Publickey,

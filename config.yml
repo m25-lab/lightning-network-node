@@ -7,7 +7,7 @@ database:
 
 node:
   chainId: "channel"
-  endpoint: "http://0.0.0.0:26657"
+  endpoint: "0.0.0.0:9090"
   coinType: 60
   prefixAddress: "cosmos"
   tokenSymbol: "token"

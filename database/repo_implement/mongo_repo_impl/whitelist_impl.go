@@ -64,3 +64,18 @@ func (mongo *WhitelistRepoImplMongo) FindOneByMultiAddress(ctx context.Context, 
 
 	return &whitelist, nil
 }
+
+func (mongo *WhitelistRepoImplMongo) FindManyByAddress(ctx context.Context, address string) ([]*models.Whitelist, error) {
+	whitelist := []*models.Whitelist{}
+
+	cursor, err := mongo.Db.Collection(Whitelist).Find(ctx, bson.M{"users.0": address})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cursor.All(ctx, &whitelist); err != nil {
+		return nil, err
+	}
+
+	return whitelist, nil
+}

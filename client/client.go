@@ -6,17 +6,32 @@ import (
 	"log"
 	"strconv"
 
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/node"
+	"google.golang.org/grpc"
 )
 
+type L1RpcClient struct {
+	bank banktypes.QueryClient
+}
 type Client struct {
-	Node *node.LightningNode
-	Bot  *tgbotapi.BotAPI
+	Node     *node.LightningNode
+	Bot      *tgbotapi.BotAPI
+	l1Client *L1RpcClient
 }
 
 func New(node *node.LightningNode) (*Client, error) {
+	l1Conn, err := grpc.Dial(
+		node.Config.Node.Endpoint,
+		grpc.WithInsecure(),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
 	bot, err := tgbotapi.NewBotAPI(node.Config.Telegram.BotId)
 
 	if err != nil {
@@ -26,6 +41,9 @@ func New(node *node.LightningNode) (*Client, error) {
 	return &Client{
 		node,
 		bot,
+		&L1RpcClient{
+			banktypes.NewQueryClient(l1Conn),
+		},
 	}, nil
 }
 
@@ -99,6 +117,24 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("⬆️ *Request whitelist to* `%s`.", update.Message.CommandArguments())
 					flagUpdateTelmsg = true
+				}
+			case "whitelist":
+				whitelist, err := client.ListWhitelist(clientId)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					strWhitelist := ""
+					for i, w := range whitelist {
+						strWhitelist += fmt.Sprintf("%d. `%s`\n", i+1, w.Users[1])
+					}
+					msg.Text = fmt.Sprintf("*Whitelist:* \n %s", strWhitelist)
+				}
+			case "balance":
+				balance, err := client.Balance(clientId)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("💰 *Balance:* `%s`", balance)
 				}
 			default:
 				msg.Text = "I don't know that command"

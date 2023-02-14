@@ -14,6 +14,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 func (client *Client) CreateConn(endpoint string) *grpc.ClientConn {
@@ -272,4 +274,34 @@ func (client *Client) ResolveAcceptAddWhitelist(clientId int64, msg *models.Mess
 	}
 
 	return nil
+}
+
+func (client *Client) ListWhitelist(clientId string) ([]*models.Whitelist, error) {
+	currentAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return nil, err
+	}
+	whitelists, err := client.Node.Repository.Whitelist.FindManyByAddress(context.Background(), currentAccount.AccAddress().String()+"@"+client.Node.Config.LNode.External)
+	if err != nil {
+		return nil, err
+	}
+
+	return whitelists, nil
+}
+
+func (client *Client) Balance(clientId string) (string, error) {
+	account, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return "", err
+	}
+
+	bankRes, err := client.l1Client.bank.Balance(
+		context.Background(),
+		&bankTypes.QueryBalanceRequest{Address: account.AccAddress().String(), Denom: "token"},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s %s", bankRes.Balance.Amount, bankRes.Balance.Denom), nil
 }

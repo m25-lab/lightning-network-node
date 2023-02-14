@@ -10,4 +10,5 @@ type WhitelistRepo interface {
 	InsertOne(context.Context, *models.Whitelist) error
 	FindByAddresses(context.Context, []string) (*models.Whitelist, error)
 	FindByMultiAddress(context.Context, string) (*models.Whitelist, error)
+	FindManyByAddress(context.Context, string) ([]*models.Whitelist, error)
 }

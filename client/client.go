@@ -70,7 +70,7 @@ func (client *Client) RunTelegramBot() error {
 				panic(err)
 			}
 
-			action, messageId, _ := client.ParseCallbackData(update.CallbackQuery.Data)
+			action, messageId, _ := ParseCallbackData(update.CallbackQuery.Data)
 
 			switch action {
 			case models.AcceptAddWhitelist:
@@ -125,7 +125,7 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					strWhitelist := ""
 					for i, w := range whitelist {
-						strWhitelist += fmt.Sprintf("%d. `%s`\n", i+1, w.Users[1])
+						strWhitelist += fmt.Sprintf("%d. `%s`\n", i+1, w.PartnerAddress)
 					}
 					msg.Text = fmt.Sprintf("*Whitelist:* \n %s", strWhitelist)
 				}

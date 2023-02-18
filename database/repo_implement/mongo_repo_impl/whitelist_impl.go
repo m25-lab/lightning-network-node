@@ -21,21 +21,19 @@ func NewWhitelistRepo(db *mongo.Database) repository.WhitelistRepo {
 }
 
 func (mongo *WhitelistRepoImplMongo) InsertOne(ctx context.Context, msg *models.Whitelist) error {
-	existdWhitelist, err := mongo.FindOneByMultiAddress(ctx, msg.MultiAddress)
-	if err == nil && existdWhitelist.Users[0] == msg.Users[0] {
-		return errors.New("address already in whitelist")
+	existedWhitelist, err := mongo.FindOneByPartnerAddress(ctx, msg.Owner, msg.PartnerAddress)
+	if (err == nil) && (existedWhitelist != nil) {
+		return errors.New("Whitelist already existed")
 	}
-
 	if _, err := mongo.Db.Collection(Whitelist).InsertOne(ctx, msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (mongo *WhitelistRepoImplMongo) FindByMultiAddress(ctx context.Context, address string) (*models.Whitelist, error) {
+func (mongo *WhitelistRepoImplMongo) FindOneByPartnerAddress(ctx context.Context, owner string, partnerAddress string) (*models.Whitelist, error) {
 	whitelist := models.Whitelist{}
-
-	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"multi_pubkey": address})
+	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"owner": owner, "partner_address": partnerAddress})
 	if err := response.Decode(&whitelist); err != nil {
 		return nil, err
 	}
@@ -43,39 +41,21 @@ func (mongo *WhitelistRepoImplMongo) FindByMultiAddress(ctx context.Context, add
 	return &whitelist, nil
 }
 
-func (mongo *WhitelistRepoImplMongo) FindByAddresses(ctx context.Context, addresses []string) (*models.Whitelist, error) {
-	whitelist := models.Whitelist{}
-
-	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"users": addresses})
-	if err := response.Decode(&whitelist); err != nil {
-		return nil, err
-	}
-
-	return &whitelist, nil
-}
-
-func (mongo *WhitelistRepoImplMongo) FindOneByMultiAddress(ctx context.Context, multiAddress string) (*models.Whitelist, error) {
-	whitelist := models.Whitelist{}
-
-	response := mongo.Db.Collection(Whitelist).FindOne(ctx, bson.M{"multi_address": multiAddress})
-	if err := response.Decode(&whitelist); err != nil {
-		return nil, err
-	}
-
-	return &whitelist, nil
-}
-
-func (mongo *WhitelistRepoImplMongo) FindManyByAddress(ctx context.Context, address string) ([]*models.Whitelist, error) {
-	whitelist := []*models.Whitelist{}
-
-	cursor, err := mongo.Db.Collection(Whitelist).Find(ctx, bson.M{"users.0": address})
+func (mongo *WhitelistRepoImplMongo) FindMany(ctx context.Context, owner string) ([]models.Whitelist, error) {
+	cur, err := mongo.Db.Collection(Whitelist).Find(ctx, bson.M{"owner": owner})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cursor.All(ctx, &whitelist); err != nil {
-		return nil, err
+	var whitelists []models.Whitelist
+	for cur.Next(ctx) {
+		whitelist := models.Whitelist{}
+		if err := cur.Decode(&whitelist); err != nil {
+			return nil, err
+		}
+
+		whitelists = append(whitelists, whitelist)
 	}
 
-	return whitelist, nil
+	return whitelists, nil
 }

@@ -23,7 +23,7 @@ func (server *MessageServer) ValidateAddWhitelist(ctx context.Context, req *pb.S
 	}
 
 	//get Account from sender
-	fromAccount := account.NewPKAccount(addWhitelist.Publickey)
+	fromAccount := account.NewPKAccount(addWhitelist.Pubkey)
 	if fromAccount.AccAddress().String() != fromAddress {
 		return errors.New("invalid data")
 	}
@@ -43,7 +43,7 @@ func (server *MessageServer) ValidateAcceptAddWhitelist(ctx context.Context, req
 	}
 
 	//get Account from sender
-	fromAccount := account.NewPKAccount(addWhitelist.Publickey)
+	fromAccount := account.NewPKAccount(addWhitelist.Pubkey)
 	if fromAccount.AccAddress().String() != fromAddress {
 		return errors.New("invalid data")
 	}
@@ -56,7 +56,7 @@ func (server *MessageServer) ValidateAcceptAddWhitelist(ctx context.Context, req
 	toAccount := account.NewPKAccount(existToAddress.Pubkey)
 
 	//check exist acceptMessageId
-	existMessage, err := server.Node.Repository.Message.FindOneById(ctx, req.AcceptMessageId)
+	existMessage, err := server.Node.Repository.Message.FindOneById(ctx, toAddress, req.AcceptMessageId)
 	if err != nil {
 		return err
 	}
@@ -70,11 +70,12 @@ func (server *MessageServer) ValidateAcceptAddWhitelist(ctx context.Context, req
 
 	server.Node.Repository.Whitelist.InsertOne(ctx,
 		&models.Whitelist{
-			ID:           primitive.NewObjectID(),
-			Users:        []string{req.To, req.From},
-			Pubkeys:      []string{toAccount.PublicKey().String(), fromAccount.PublicKey().String()},
-			MultiAddress: multisigAddr,
-			MultiPubkey:  "",
+			ID:             primitive.NewObjectID(),
+			Owner:          toAddress,
+			PartnerAddress: fromAccount.AccAddress().String(),
+			PartnerPubkey:  fromAccount.PublicKey().String(),
+			MultiAddress:   multisigAddr,
+			MultiPubkey:    "",
 		})
 
 	return nil

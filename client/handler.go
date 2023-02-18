@@ -113,17 +113,20 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 
 	//@todo: create message
 	data, err := json.Marshal(models.AddWhitelistData{
-		Publickey: acc.PublicKey().String(),
+		Pubkey: acc.PublicKey().String(),
 	})
 	if err != nil {
 		return nil, err
 	}
+	messageId := primitive.NewObjectID()
 	message := models.Message{
-		ID:        primitive.NewObjectID(),
-		ChannelID: "",
-		Action:    models.AddWhitelist,
-		Data:      string(data),
-		Users:     []string{acc.AccAddress().String() + "@" + client.Node.Config.LNode.External, toAddress},
+		ID:         messageId,
+		OriginalID: messageId,
+		ChannelID:  "",
+		Action:     models.AddWhitelist,
+		Data:       string(data),
+		Owner:      acc.AccAddress().String(),
+		Users:      []string{acc.AccAddress().String() + "@" + client.Node.Config.LNode.External, toAddress},
 	}
 	err = client.Node.Repository.Message.InsertOne(context.Background(), &message)
 	if err != nil {
@@ -155,38 +158,30 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 }
 
 func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*models.Message, error) {
-	//@todo: check message is valid
-	message, err := client.Node.Repository.Message.FindOneById(context.Background(), messageId)
-	if err != nil {
-		return nil, err
-	}
-	var addWhitelist models.AddWhitelistData
-	if err := json.Unmarshal([]byte(message.Data), &addWhitelist); err != nil {
-		return nil, errors.New("invalid data")
-	}
-
 	//@todo: create from account
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
 		return nil, err
 	}
 
-	//@todo: create to account
-	toEndpoint := strings.Split(message.Users[0], "@")[1]
-	toAccount := account.NewPKAccount(addWhitelist.Publickey)
-
-	//@todo: create message
-	savedMessage := models.Message{
-		ID:        primitive.NewObjectID(),
-		ChannelID: "",
-		Action:    models.AcceptAddWhitelist,
-		Data:      fromAccount.PublicKey().String(),
-		Users:     []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, message.Users[0]},
-	}
-	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
+	//@todo: check message is valid
+	reliedMessage, err := client.Node.Repository.Message.FindOneById(
+		context.Background(),
+		fromAccount.AccAddress().String(),
+		messageId,
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	var addWhitelist models.AddWhitelistData
+	if err := json.Unmarshal([]byte(reliedMessage.Data), &addWhitelist); err != nil {
+		return nil, errors.New("invalid data")
+	}
+
+	//@todo: create to account
+	toEndpoint := strings.Split(reliedMessage.Users[0], "@")[1]
+	toAccount := account.NewPKAccount(addWhitelist.Pubkey)
 
 	//@todo create multi account
 	acc := account.NewAccount()
@@ -194,37 +189,49 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 
 	//@todo: save whitelist
 	savedWhitelist := models.Whitelist{
-		ID: primitive.NewObjectID(),
-		Users: []string{
-			fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, message.Users[0],
-		},
-		Pubkeys: []string{
-			fromAccount.PublicKey().String(), addWhitelist.Publickey,
-		},
-		MultiAddress: multiAddr,
-		MultiPubkey:  "",
+		ID:             primitive.NewObjectID(),
+		Owner:          fromAccount.AccAddress().String(),
+		PartnerAddress: reliedMessage.Users[0],
+		MultiAddress:   multiAddr,
+		MultiPubkey:    "",
 	}
 	err = client.Node.Repository.Whitelist.InsertOne(context.Background(), &savedWhitelist)
 	if err != nil {
 		return nil, err
 	}
 
-	//@todo: send message
+	//@todo: create message
 	data, err := json.Marshal(models.AddWhitelistData{
-		Publickey: fromAccount.PublicKey().String(),
+		Pubkey: fromAccount.PublicKey().String(),
 	})
 	if err != nil {
 		return nil, err
 	}
+	ID := primitive.NewObjectID()
+	savedMessage := models.Message{
+		ID:         ID,
+		OriginalID: ID,
+		ChannelID:  "",
+		Action:     models.AcceptAddWhitelist,
+		Data:       string(data),
+		Owner:      fromAccount.AccAddress().String(),
+		Users:      []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0]},
+	}
+	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	//@todo: send message
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       savedMessage.ID.Hex(),
-		ChannelId:       message.ChannelID,
+		ChannelId:       reliedMessage.ChannelID,
 		Action:          models.AcceptAddWhitelist,
 		Data:            string(data),
 		From:            fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
-		To:              message.Users[0],
-		AcceptMessageId: message.ID.Hex(),
+		To:              reliedMessage.Users[0],
+		AcceptMessageId: reliedMessage.OriginalID.Hex(),
 	})
 	if err != nil {
 		return nil, err
@@ -234,15 +241,6 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	}
 
 	return &savedMessage, nil
-}
-
-func (client *Client) ParseCallbackData(data string) (string, string, error) {
-	splitedData := strings.Split(data, ":")
-	if len(splitedData) != 2 {
-		return "", "", errors.New("invalid data")
-	}
-
-	return splitedData[0], splitedData[1], nil
 }
 
 func (client *Client) ResolveAddWhitelist(clientId int64, msg *models.Message) error {
@@ -276,12 +274,12 @@ func (client *Client) ResolveAcceptAddWhitelist(clientId int64, msg *models.Mess
 	return nil
 }
 
-func (client *Client) ListWhitelist(clientId string) ([]*models.Whitelist, error) {
+func (client *Client) ListWhitelist(clientId string) ([]models.Whitelist, error) {
 	currentAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
 		return nil, err
 	}
-	whitelists, err := client.Node.Repository.Whitelist.FindManyByAddress(context.Background(), currentAccount.AccAddress().String()+"@"+client.Node.Config.LNode.External)
+	whitelists, err := client.Node.Repository.Whitelist.FindMany(context.Background(), currentAccount.AccAddress().String())
 	if err != nil {
 		return nil, err
 	}

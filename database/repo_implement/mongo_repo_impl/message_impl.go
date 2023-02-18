@@ -27,14 +27,14 @@ func (mongo *MessageRepoImplMongo) InsertOne(ctx context.Context, msg *models.Me
 	return nil
 }
 
-func (mongo *MessageRepoImplMongo) FindOneById(ctx context.Context, id string) (*models.Message, error) {
+func (mongo *MessageRepoImplMongo) FindOneById(ctx context.Context, owner string, id string) (*models.Message, error) {
 	message := models.Message{}
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
-	response := mongo.Db.Collection(Message).FindOne(ctx, bson.M{"_id": oid})
+	response := mongo.Db.Collection(Message).FindOne(ctx, bson.M{"_id": oid, "owner": owner})
 	if err := response.Decode(&message); err != nil {
 		return nil, err
 	}
@@ -42,8 +42,23 @@ func (mongo *MessageRepoImplMongo) FindOneById(ctx context.Context, id string) (
 	return &message, nil
 }
 
-func (mongo *MessageRepoImplMongo) FindMany(ctx context.Context, userId string, action string) ([]models.Message, error) {
-	cur, err := mongo.Db.Collection(Message).Find(ctx, bson.M{"action": action, "users": userId})
+func (mongo *MessageRepoImplMongo) FindOneByOriginalID(ctx context.Context, owner string, id string) (*models.Message, error) {
+	message := models.Message{}
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	response := mongo.Db.Collection(Message).FindOne(ctx, bson.M{"original_id": oid, "owner": owner})
+	if err := response.Decode(&message); err != nil {
+		return nil, err
+	}
+
+	return &message, nil
+}
+
+func (mongo *MessageRepoImplMongo) FindMany(ctx context.Context, owner string, action string) ([]models.Message, error) {
+	cur, err := mongo.Db.Collection(Message).Find(ctx, bson.M{"action": action, "owner": owner})
 	if err != nil {
 		return nil, err
 	}

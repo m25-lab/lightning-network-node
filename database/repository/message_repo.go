@@ -9,7 +9,8 @@ import (
 
 type MessageRepo interface {
 	InsertOne(context.Context, *models.Message) error
-	FindOneById(context.Context, string) (*models.Message, error)
+	FindOneById(context.Context, string, string) (*models.Message, error)
+	FindOneByOriginalID(context.Context, string, string) (*models.Message, error)
 	FindMany(context.Context, string, string) ([]models.Message, error)
 	UpdateTelegramChatId(context.Context, primitive.ObjectID, int) error
 }

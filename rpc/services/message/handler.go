@@ -41,12 +41,18 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		}
 	}
 
+	messageId, err := primitive.ObjectIDFromHex(req.MessageId)
+	if err != nil {
+		return nil, err
+	}
 	msg := &models.Message{
-		ID:        primitive.NewObjectID(),
-		ChannelID: req.ChannelId,
-		Action:    req.Action,
-		Data:      req.Data,
-		Users:     []string{req.From, req.To},
+		ID:         primitive.NewObjectID(),
+		OriginalID: messageId,
+		ChannelID:  req.ChannelId,
+		Action:     req.Action,
+		Owner:      toAddress,
+		Data:       req.Data,
+		Users:      []string{req.From, req.To},
 	}
 
 	if err := server.Node.Repository.Message.InsertOne(

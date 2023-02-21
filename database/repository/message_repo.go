@@ -13,4 +13,5 @@ type MessageRepo interface {
 	FindOneByOriginalID(context.Context, string, string) (*models.Message, error)
 	FindMany(context.Context, string, string) ([]models.Message, error)
 	UpdateTelegramChatId(context.Context, primitive.ObjectID, int) error
+	Update(context.Context, primitive.ObjectID, *models.Message) error
 }

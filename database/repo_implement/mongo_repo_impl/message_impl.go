@@ -84,3 +84,19 @@ func (mongo *MessageRepoImplMongo) UpdateTelegramChatId(ctx context.Context, id 
 
 	return nil
 }
+
+func (mongo *MessageRepoImplMongo) Update(ctx context.Context, id primitive.ObjectID, message *models.Message) error {
+	updatePayload := bson.M{
+		"$set": bson.M{
+			"action":           message.Action,
+			"telegram_chat_id": message.TelegramChatId,
+			"isReplied":        message.IsReplied,
+		},
+	}
+	_, err := mongo.Db.Collection(Message).UpdateByID(ctx, id, updatePayload)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

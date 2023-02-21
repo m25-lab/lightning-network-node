@@ -2,8 +2,10 @@ package common
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -160,6 +162,14 @@ func ConvertToDecimal(amount string, decimal int) (float64, error) {
 	}
 
 	return convert, nil
+}
+
+func RandomSecret() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func ToHashCode(secret string) string {

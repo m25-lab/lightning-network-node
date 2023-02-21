@@ -56,9 +56,12 @@ func (server *MessageServer) ValidateAcceptAddWhitelist(ctx context.Context, req
 	toAccount := account.NewPKAccount(existToAddress.Pubkey)
 
 	//check exist acceptMessageId
-	existMessage, err := server.Node.Repository.Message.FindOneById(ctx, toAddress, req.AcceptMessageId)
+	existMessage, err := server.Node.Repository.Message.FindOneById(ctx, toAddress, req.ReliedMessageId)
 	if err != nil {
 		return err
+	}
+	if existMessage.IsReplied {
+		return errors.New("invalid data")
 	}
 	if existMessage.Users[0] != req.To || existMessage.Users[1] != req.From {
 		return errors.New("invalid data")
@@ -77,6 +80,9 @@ func (server *MessageServer) ValidateAcceptAddWhitelist(ctx context.Context, req
 			MultiAddress:   multisigAddr,
 			MultiPubkey:    "",
 		})
+
+	existMessage.IsReplied = true
+	server.Node.Repository.Message.Update(ctx, existMessage.ID, existMessage)
 
 	return nil
 }

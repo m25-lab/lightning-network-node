@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	channelTypes "github.com/m25-lab/channel/x/channel/types"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -58,4 +59,31 @@ func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 func (cn *Channel) ListChannel() (*channelTypes.QueryAllChannelResponse, error) {
 	channelClient := channelTypes.NewQueryClient(cn.rpcClient)
 	return channelClient.ChannelAll(context.Background(), &channelTypes.QueryAllChannelRequest{})
+}
+
+func (cn *Channel) CreateCommitmentMsg(
+	multisigAddr string,
+	toTimelockAddr string,
+	coinToCreator int64,
+	toHashlockAddr string,
+	coinToHtlc int64,
+	hashCode string,
+) *channelTypes.MsgCommitment {
+	return &channelTypes.MsgCommitment{
+		ChannelID:      multisigAddr + ":token:1",
+		Creator:        multisigAddr,
+		From:           multisigAddr,
+		Timelock:       100,
+		ToTimelockAddr: toTimelockAddr,
+		CoinToCreator: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(coinToCreator),
+		},
+		ToHashlockAddr: toHashlockAddr,
+		Hashcode:       hashCode,
+		CoinToHtlc: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(coinToHtlc),
+		},
+	}
 }

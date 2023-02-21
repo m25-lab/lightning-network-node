@@ -15,7 +15,7 @@ message SendMessageRequest {
     string data = 4;
     string from = 5;
     string to = 6;
-    string accept_message_id = 7;
+    string relied_message_id = 7;
 }
 
 message SendMessageResponse {

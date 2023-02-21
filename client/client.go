@@ -6,8 +6,14 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	sdkClient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/evmos/ethermint/encoding"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/m25-lab/channel/app"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/node"
 	"google.golang.org/grpc"
@@ -17,9 +23,10 @@ type L1RpcClient struct {
 	bank banktypes.QueryClient
 }
 type Client struct {
-	Node     *node.LightningNode
-	Bot      *tgbotapi.BotAPI
-	l1Client *L1RpcClient
+	Node      *node.LightningNode
+	Bot       *tgbotapi.BotAPI
+	l1Client  *L1RpcClient
+	clientCtx *client.Context
 }
 
 func New(node *node.LightningNode) (*Client, error) {
@@ -38,12 +45,23 @@ func New(node *node.LightningNode) (*Client, error) {
 		panic(err)
 	}
 
+	encodingConfig := encoding.MakeConfig(app.ModuleBasics)
+	clientCtx := sdkClient.Context{}
+	clientCtx = clientCtx.
+		WithCodec(encodingConfig.Marshaler).
+		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
+		WithTxConfig(encodingConfig.TxConfig).
+		WithLegacyAmino(encodingConfig.Amino).
+		WithAccountRetriever(authTypes.AccountRetriever{}).
+		WithBroadcastMode(flags.BroadcastSync)
+
 	return &Client{
 		node,
 		bot,
 		&L1RpcClient{
 			banktypes.NewQueryClient(l1Conn),
 		},
+		&clientCtx,
 	}, nil
 }
 

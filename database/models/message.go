@@ -3,24 +3,47 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 const (
-	OpenChannel        string = "open_channel"
-	CloseChannel       string = "close_channel"
-	AddFund            string = "add_fund"
-	AddWhitelist       string = "add_whitelist"
-	AcceptAddWhitelist string = "accept_add_whitelist"
+	ExchangeHashcode        string = "exchange_hashcode"
+	ReplyExchangeHashcode   string = "reply_exchange_hashcode"
+	ExchangeCommitment      string = "create_commitment"
+	ReplyExchangeCommitment string = "reply_create_commitment"
+	OpenChannel             string = "open_channel"
+	CloseChannel            string = "close_channel"
+	AddFund                 string = "add_fund"
+	AddWhitelist            string = "add_whitelist"
+	AcceptAddWhitelist      string = "accept_add_whitelist"
 )
 
 type AddWhitelistData struct {
 	Pubkey string `json:"pubkey"`
 }
 
+type CreateCommitmentData struct {
+	Creator          string `json:"creator"`
+	From             string `json:"from"`
+	Timelock         uint64 `json:"timelock"`
+	ToTimelockAddr   string `json:"to_timelock_addr"`
+	ToHashlockAddr   string `json:"to_hashlock_addr"`
+	CoinToCreator    int64  `json:"coin_to_creator"`
+	CoinToHtlc       int64  `json:"coin_to_htlc"`
+	Hashcode         string `json:"hashcode"`
+	PartnerSignature string `json:"partner_signature"`
+}
+
+type ExchangeHashcodeData struct {
+	Secret   string `json:"secret"`
+	Hashcode string `json:"hashcode"`
+}
+
 type Message struct {
-	ID             primitive.ObjectID `bson:"_id, omitempty"`
-	OriginalID     primitive.ObjectID `bson:"original_id, omitempty"`
-	ChannelID      string             `bson:"channel_id"`
-	Action         string             `bson:"action"`
-	Data           string             `bson:"data"`
-	Owner          string             `bson:"owner"`
-	Users          []string           `bson:"users"`
-	TelegramChatId int64              `bson:"telegram_chat_id"`
+	ID              primitive.ObjectID `bson:"_id, omitempty"`
+	OriginalID      primitive.ObjectID `bson:"original_id, omitempty"`
+	ChannelID       string             `bson:"channel_id"`
+	Action          string             `bson:"action"`
+	Data            string             `bson:"data"`
+	Owner           string             `bson:"owner"`
+	Users           []string           `bson:"users"`
+	TelegramChatId  int64              `bson:"telegram_chat_id"`
+	ReliedMessageId string             `bson:"relied_message_id"`
+	IsReplied       bool               `bson:"is_replied"`
 }

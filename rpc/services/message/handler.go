@@ -46,13 +46,15 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		return nil, err
 	}
 	msg := &models.Message{
-		ID:         primitive.NewObjectID(),
-		OriginalID: messageId,
-		ChannelID:  req.ChannelId,
-		Action:     req.Action,
-		Owner:      toAddress,
-		Data:       req.Data,
-		Users:      []string{req.From, req.To},
+		ID:              primitive.NewObjectID(),
+		OriginalID:      messageId,
+		ChannelID:       req.ChannelId,
+		Action:          req.Action,
+		Owner:           toAddress,
+		Data:            req.Data,
+		Users:           []string{req.From, req.To},
+		ReliedMessageId: req.ReliedMessageId,
+		IsReplied:       false,
 	}
 
 	if err := server.Node.Repository.Message.InsertOne(

@@ -26,7 +26,7 @@ type SendMessageRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	MessageId       string `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	ChannelId       string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	ChannelID       string `protobuf:"bytes,2,opt,name=channel_id,json=ChannelID,proto3" json:"channel_id,omitempty"`
 	Action          string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
 	Data            string `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
 	From            string `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
@@ -73,9 +73,9 @@ func (x *SendMessageRequest) GetMessageId() string {
 	return ""
 }
 
-func (x *SendMessageRequest) GetChannelId() string {
+func (x *SendMessageRequest) GetChannelID() string {
 	if x != nil {
-		return x.ChannelId
+		return x.ChannelID
 	}
 	return ""
 }

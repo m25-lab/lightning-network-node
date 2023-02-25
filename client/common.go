@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/bank"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
@@ -140,7 +141,7 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       message.ID.Hex(),
-		ChannelId:       message.ChannelID,
+		ChannelID:       message.ChannelID,
 		Action:          message.Action,
 		Data:            string(payload),
 		From:            acc.AccAddress().String() + "@" + client.Node.Config.LNode.External,
@@ -151,7 +152,7 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 		return nil, err
 	}
 	if response.ErrorCode != "" {
-		return nil, errors.New(response.ErrorCode)
+		return nil, errors.New(response.ErrorCode + ": " + response.Response)
 	}
 
 	return &message, nil
@@ -192,6 +193,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 		ID:             primitive.NewObjectID(),
 		Owner:          fromAccount.AccAddress().String(),
 		PartnerAddress: reliedMessage.Users[0],
+		PartnerPubkey:  addWhitelist.Pubkey,
 		MultiAddress:   multiAddr,
 		MultiPubkey:    "",
 	}
@@ -209,16 +211,23 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	}
 	ID := primitive.NewObjectID()
 	savedMessage := models.Message{
-		ID:         ID,
-		OriginalID: ID,
-		ChannelID:  "",
-		Action:     models.AcceptAddWhitelist,
-		Data:       string(payload),
-		Owner:      fromAccount.AccAddress().String(),
-		Users:      []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0]},
-		IsReplied:  false,
+		ID:              ID,
+		OriginalID:      ID,
+		ChannelID:       "",
+		Action:          models.AcceptAddWhitelist,
+		Data:            string(payload),
+		Owner:           fromAccount.AccAddress().String(),
+		Users:           []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0]},
+		ReliedMessageId: reliedMessage.ID.Hex(),
+		IsReplied:       false,
 	}
 	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	reliedMessage.IsReplied = true
+	err = client.Node.Repository.Message.Update(context.Background(), reliedMessage.ID, reliedMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +236,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       savedMessage.ID.Hex(),
-		ChannelId:       reliedMessage.ChannelID,
+		ChannelID:       reliedMessage.ChannelID,
 		Action:          models.AcceptAddWhitelist,
 		Data:            string(payload),
 		From:            fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
@@ -238,7 +247,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 		return nil, err
 	}
 	if response.ErrorCode != "" {
-		return nil, errors.New(response.ErrorCode)
+		return nil, errors.New(response.ErrorCode + ":" + response.Response)
 	}
 
 	return &savedMessage, nil
@@ -266,7 +275,7 @@ func (client *Client) ResolveAcceptAddWhitelist(clientId int64, msg *models.Mess
 	telMsg := tgbotapi.NewMessage(clientId, "")
 	telMsg.ParseMode = "Markdown"
 
-	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n`%s` has accepted your request to add them to your whitelist.", msg.Users[0])
+	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n`%s` has accepted your request to add them to your whitelist.", msg.Users[1])
 
 	if _, err := client.Bot.Send(telMsg); err != nil {
 		return err
@@ -305,149 +314,39 @@ func (client *Client) Balance(clientId string) (string, error) {
 	return fmt.Sprintf("%s %s", bankRes.Balance.Amount, bankRes.Balance.Denom), nil
 }
 
-func (client *Client) ExchangeHashcode(clientId string, toAddress string, amount int64) (*models.Message, error) {
-	fromAccount, err := client.CurrentAccount(clientId)
+func (client *Client) Transfer(fromAccount *account.PrivateKeySerialized, toAddress string, value int64) error {
+	bankClient := bank.NewBank(*client.ClientCtx, "token", 60)
+	request := &bank.TransferRequest{
+		PrivateKey: fromAccount.PrivateKeyToString(),
+		Receiver:   toAddress,
+		Amount:     big.NewInt(value),
+		GasLimit:   200000,
+		GasPrice:   "0token",
+	}
+
+	txBuilder, err := bankClient.TransferRawDataWithPrivateKey(request)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), toAddress)
+	txJson, err := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilder)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
-	toEndpoint := strings.Split(toAddress, "@")[1]
 
-	multisigAddr, _, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
-
-	//random secret
-	secret, err := common.RandomSecret()
+	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	hashCode := common.ToHashCode(secret)
 
-	//create message
-	payload, err := json.Marshal(models.ExchangeHashcodeData{
-		Secret:   secret,
-		Hashcode: hashCode,
-	})
+	txHash := common.TxHash(txByte)
+	fmt.Println("txHash", txHash)
+
+	_, err = client.ClientCtx.BroadcastTxCommit(txByte)
+
 	if err != nil {
-		return nil, err
-	}
-	ID := primitive.NewObjectID()
-	savedMessage := models.Message{
-		ID:         ID,
-		OriginalID: ID,
-		ChannelID:  multisigAddr + ":token:1",
-		Action:     models.ExchangeHashcode,
-		Data:       string(payload),
-		Owner:      fromAccount.AccAddress().String(),
-		Users:      []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, toAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External},
-		IsReplied:  false,
-	}
-	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	payload, err = json.Marshal(models.ExchangeHashcodeData{
-		Hashcode: hashCode,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
-	reponse, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
-		MessageId: ID.Hex(),
-		ChannelId: savedMessage.ChannelID,
-		Action:    models.ExchangeHashcode,
-		Data:      string(payload),
-		From:      fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
-		To:        toAddress,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if reponse.ErrorCode != "" {
-		return nil, errors.New(reponse.ErrorCode)
-	}
-
-	return &savedMessage, nil
-}
-
-func (client *Client) ExchangeCommitment(clientId string, toAddress string, amount int64, partnerHashCode string) (*models.Message, error) {
-	fromAccount, err := client.CurrentAccount(clientId)
-	if err != nil {
-		return nil, err
-	}
-
-	currentBalance, err := client.Balance(clientId)
-	fmt.Printf("current balance: %s", currentBalance)
-
-	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), toAddress)
-	if err != nil {
-		return nil, err
-	}
-	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
-
-	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
-
-	//create l1 commitment
-	channelClient := channel.NewChannel(*client.clientCtx)
-	commitmentMsg := channelClient.CreateCommitmentMsg(
-		multisigAddr,
-		toAccount.AccAddress().String(),
-		0,
-		fromAccount.AccAddress().String(),
-		amount,
-		partnerHashCode,
-	)
-
-	//create l1 sign message
-	signCommitmentMsg := channel.SignMsgRequest{
-		Msg:      commitmentMsg,
-		GasLimit: 21000,
-		GasPrice: "1token",
-	}
-
-	//sign l1 commitment
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, fromAccount, multiSigPubkey)
-	if err != nil {
-		return nil, err
-	}
-
-	//create ln message
-	payload, err := json.Marshal(models.CreateCommitmentData{
-		Creator:          commitmentMsg.Creator,
-		From:             commitmentMsg.From,
-		Timelock:         commitmentMsg.Timelock,
-		ToTimelockAddr:   commitmentMsg.ToTimelockAddr,
-		ToHashlockAddr:   commitmentMsg.ToHashlockAddr,
-		CoinToCreator:    commitmentMsg.CoinToCreator.Amount.Int64(),
-		CoinToHtlc:       commitmentMsg.CoinToHtlc.Amount.Int64(),
-		Hashcode:         commitmentMsg.Hashcode,
-		PartnerSignature: strSig,
-	})
-	if err != nil {
-		return nil, err
-	}
-	messageId := primitive.NewObjectID()
-	message := models.Message{
-		ID:         messageId,
-		OriginalID: messageId,
-		ChannelID:  commitmentMsg.ChannelID,
-		Action:     models.ExchangeCommitment,
-		Data:       string(payload),
-		Owner:      fromAccount.AccAddress().String(),
-		Users:      []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, toAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External},
-		IsReplied:  false,
-	}
-	err = client.Node.Repository.Message.InsertOne(context.Background(), &message)
-	if err != nil {
-		return nil, err
-	}
-
-	return &message, nil
+	return nil
 }

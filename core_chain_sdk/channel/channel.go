@@ -2,6 +2,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -40,6 +41,7 @@ func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	txBuilder, err := newTx.BuildUnsignedTx(req.Msg)
 
 	if err != nil {
+		fmt.Println(err)
 		return "", err
 	}
 
@@ -47,6 +49,8 @@ func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	if err != nil {
 		return "", errors.Wrap(err, "SignTx")
 	}
+	txJson, _ := common.TxBuilderJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
+	fmt.Print(txJson)
 
 	sign, err := common.TxBuilderSignatureJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
 	if err != nil {
@@ -84,6 +88,30 @@ func (cn *Channel) CreateCommitmentMsg(
 		CoinToHtlc: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinToHtlc),
+		},
+	}
+}
+
+func (cn *Channel) CreateOpenChannelMsg(
+	multisigAddr string,
+	partA string,
+	partB string,
+	coinA int64,
+	coinB int64,
+) *channelTypes.MsgOpenChannel {
+	return &channelTypes.MsgOpenChannel{
+		Creator:      multisigAddr,
+		MultisigAddr: multisigAddr,
+		Sequence:     "1",
+		PartA:        partA,
+		PartB:        partB,
+		CoinA: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(coinA),
+		},
+		CoinB: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(coinB),
 		},
 	}
 }

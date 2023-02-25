@@ -3,15 +3,13 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 const (
-	ExchangeHashcode        string = "exchange_hashcode"
-	ReplyExchangeHashcode   string = "reply_exchange_hashcode"
-	ExchangeCommitment      string = "create_commitment"
-	ReplyExchangeCommitment string = "reply_create_commitment"
-	OpenChannel             string = "open_channel"
-	CloseChannel            string = "close_channel"
-	AddFund                 string = "add_fund"
-	AddWhitelist            string = "add_whitelist"
-	AcceptAddWhitelist      string = "accept_add_whitelist"
+	ExchangeHashcode   string = "exchange_hashcode"
+	ExchangeCommitment string = "create_commitment"
+	OpenChannel        string = "open_channel"
+	CloseChannel       string = "close_channel"
+	AddFund            string = "add_fund"
+	AddWhitelist       string = "add_whitelist"
+	AcceptAddWhitelist string = "accept_add_whitelist"
 )
 
 type AddWhitelistData struct {
@@ -20,6 +18,7 @@ type AddWhitelistData struct {
 
 type CreateCommitmentData struct {
 	Creator          string `json:"creator"`
+	ChannelID        string `json:"channel_id"`
 	From             string `json:"from"`
 	Timelock         uint64 `json:"timelock"`
 	ToTimelockAddr   string `json:"to_timelock_addr"`
@@ -30,9 +29,14 @@ type CreateCommitmentData struct {
 	PartnerSignature string `json:"partner_signature"`
 }
 
+type OpenChannelData struct {
+	StrSig string `json:"str_sig"`
+}
+
 type ExchangeHashcodeData struct {
-	Secret   string `json:"secret"`
-	Hashcode string `json:"hashcode"`
+	MySecret        string `json:"my_secret"`
+	MyHashcode      string `json:"my_hashcode"`
+	PartnerHashcode string `json:"partner_hashcode"`
 }
 
 type Message struct {

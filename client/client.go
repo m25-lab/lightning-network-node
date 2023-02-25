@@ -5,15 +5,19 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkClient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/evmos/ethermint/encoding"
+	ethermintTypes "github.com/evmos/ethermint/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/channel/app"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/node"
 	"google.golang.org/grpc"
@@ -26,7 +30,7 @@ type Client struct {
 	Node      *node.LightningNode
 	Bot       *tgbotapi.BotAPI
 	l1Client  *L1RpcClient
-	clientCtx *client.Context
+	ClientCtx *client.Context
 }
 
 func New(node *node.LightningNode) (*Client, error) {
@@ -45,14 +49,41 @@ func New(node *node.LightningNode) (*Client, error) {
 		panic(err)
 	}
 
+	sdkConfig := types.GetConfig()
+	sdkConfig.SetPurpose(44)
+
+	sdkConfig.SetCoinType(ethermintTypes.Bip44CoinType)
+
+	bech32PrefixAccAddr := fmt.Sprintf("%v", "cosmos")
+	bech32PrefixAccPub := fmt.Sprintf("%vpub", "cosmos")
+	bech32PrefixValAddr := fmt.Sprintf("%vvaloper", "cosmos")
+	bech32PrefixValPub := fmt.Sprintf("%vvaloperpub", "cosmos")
+	bech32PrefixConsAddr := fmt.Sprintf("%vvalcons", "cosmos")
+	bech32PrefixConsPub := fmt.Sprintf("%vvalconspub", "cosmos")
+
+	sdkConfig.SetBech32PrefixForAccount(bech32PrefixAccAddr, bech32PrefixAccPub)
+	sdkConfig.SetBech32PrefixForValidator(bech32PrefixValAddr, bech32PrefixValPub)
+	sdkConfig.SetBech32PrefixForConsensusNode(bech32PrefixConsAddr, bech32PrefixConsPub)
+
+	ar := authTypes.AccountRetriever{}
+
+	//github.com/cosmos/cosmos-sdk/simapp/app.go
+	//github.com/evmos/ethermint@v0.19.0/app/app.go -> selected
 	encodingConfig := encoding.MakeConfig(app.ModuleBasics)
-	clientCtx := sdkClient.Context{}
-	clientCtx = clientCtx.
+	rpcHttp, err := sdkClient.NewClientFromNode("http://0.0.0.0:26657")
+	if err != nil {
+		panic(err)
+	}
+	ClientCtx := sdkClient.Context{}
+	ClientCtx = ClientCtx.
+		WithClient(rpcHttp).
+		//WithNodeURI(c.endpoint).
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
-		WithAccountRetriever(authTypes.AccountRetriever{}).
+		WithAccountRetriever(ar).
+		WithChainID("channel").
 		WithBroadcastMode(flags.BroadcastSync)
 
 	return &Client{
@@ -61,7 +92,7 @@ func New(node *node.LightningNode) (*Client, error) {
 		&L1RpcClient{
 			banktypes.NewQueryClient(l1Conn),
 		},
-		&clientCtx,
+		&ClientCtx,
 	}, nil
 }
 
@@ -154,6 +185,18 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("💰 *Balance:* `%s`", balance)
 				}
+			case "ln_transfer":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				amount, err := strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				err = client.LnTransfer(clientId, params[0], amount)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("✅ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
+				}
 			default:
 				msg.Text = "I don't know that command"
 			}
@@ -173,7 +216,7 @@ func (client *Client) RunTelegramBot() error {
 	return nil
 }
 
-func (client *Client) TelegramMsg(_clientId string, msg *models.Message) error {
+func (client *Client) TelegramMsg(_clientId string, msg *models.Message, fromAccount *account.PrivateKeySerialized, toAccount *account.PKAccount) error {
 	clientId, err := strconv.ParseInt(_clientId, 10, 64)
 	if err != nil {
 		return err

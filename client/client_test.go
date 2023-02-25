@@ -96,7 +96,7 @@ package client
 // 	response, err := c.rpcLightningNode.channel.CreateCommitment(
 // 		context.Background(),
 // 		&pb.CreateCommitmentRequest{
-// 			ChannelId:   partACommitment.ChannelID,
+// 			ChannelID:   partACommitment.ChannelID,
 // 			FromAddress: aAddress,
 // 			Payload:     string(strACommitment),
 // 			Signature:   aSignature,
@@ -155,7 +155,7 @@ package client
 // 	response, err := c.rpcLightningNode.channel.CreateCommitment(
 // 		context.Background(),
 // 		&pb.CreateCommitmentRequest{
-// 			ChannelId:   partBCommitment.ChannelID,
+// 			ChannelID:   partBCommitment.ChannelID,
 // 			FromAddress: bAddress,
 // 			Payload:     string(strBCommitment),
 // 			Signature:   bSignature,
@@ -228,7 +228,7 @@ package client
 // 	return response.GetResponse()
 // }
 
-// func OpenChannelFromB(channelId string) {
+// func OpenChannelFromB(ChannelID string) {
 // 	cfg := &Config{
 // 		ChainId:               "channel",
 // 		Endpoint:              "http://0.0.0.0:26657",
@@ -245,7 +245,7 @@ package client
 // 	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
 // 	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 
-// 	channelResult, _ := c.rpcLightningNode.channel.GetChannelById(context.Background(), &pb.GetChannelRequest{Id: channelId})
+// 	channelResult, _ := c.rpcLightningNode.channel.GetChannelById(context.Background(), &pb.GetChannelRequest{Id: ChannelID})
 
 // 	var payload struct {
 // 		Msg      channelTypes.MsgOpenChannel

@@ -49,8 +49,6 @@ func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	if err != nil {
 		return "", errors.Wrap(err, "SignTx")
 	}
-	txJson, _ := common.TxBuilderJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
-	fmt.Print(txJson)
 
 	sign, err := common.TxBuilderSignatureJsonEncoder(cn.rpcClient.TxConfig, txBuilder)
 	if err != nil {

@@ -69,8 +69,8 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 	)
 	signCommitmentMsg := channel.SignMsgRequest{
 		Msg:      commitmentMsg,
-		GasLimit: 21000,
-		GasPrice: "1token",
+		GasLimit: 100000,
+		GasPrice: "0token",
 	}
 
 	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, toAccount, multiSigPubkey)

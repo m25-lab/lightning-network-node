@@ -10,11 +10,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkClient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/evmos/ethermint/encoding"
-	ethermintTypes "github.com/evmos/ethermint/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/channel/app"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -49,28 +47,12 @@ func New(node *node.LightningNode) (*Client, error) {
 		panic(err)
 	}
 
-	sdkConfig := types.GetConfig()
-	sdkConfig.SetPurpose(44)
-
-	sdkConfig.SetCoinType(ethermintTypes.Bip44CoinType)
-
-	bech32PrefixAccAddr := fmt.Sprintf("%v", "cosmos")
-	bech32PrefixAccPub := fmt.Sprintf("%vpub", "cosmos")
-	bech32PrefixValAddr := fmt.Sprintf("%vvaloper", "cosmos")
-	bech32PrefixValPub := fmt.Sprintf("%vvaloperpub", "cosmos")
-	bech32PrefixConsAddr := fmt.Sprintf("%vvalcons", "cosmos")
-	bech32PrefixConsPub := fmt.Sprintf("%vvalconspub", "cosmos")
-
-	sdkConfig.SetBech32PrefixForAccount(bech32PrefixAccAddr, bech32PrefixAccPub)
-	sdkConfig.SetBech32PrefixForValidator(bech32PrefixValAddr, bech32PrefixValPub)
-	sdkConfig.SetBech32PrefixForConsensusNode(bech32PrefixConsAddr, bech32PrefixConsPub)
-
 	ar := authTypes.AccountRetriever{}
 
 	//github.com/cosmos/cosmos-sdk/simapp/app.go
 	//github.com/evmos/ethermint@v0.19.0/app/app.go -> selected
 	encodingConfig := encoding.MakeConfig(app.ModuleBasics)
-	rpcHttp, err := sdkClient.NewClientFromNode("http://0.0.0.0:26657")
+	rpcHttp, err := sdkClient.NewClientFromNode("http://localhost:26657")
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +110,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("✅ *Add whitelist successfully.* \n Add `%s` to whitelist", message.Users[0])
+					msg.Text = fmt.Sprintf("✅ *Add whitelist successfully.* \n Add `%s` to whitelist", message.Users[1])
 					flagUpdateTelmsg = true
 				}
 			}

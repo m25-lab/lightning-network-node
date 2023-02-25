@@ -85,10 +85,10 @@ func (t *TxMulSign) SignTxWithSignerAddress(txBuilder client.TxBuilder, multiSig
 		return fmt.Errorf("address signer %s invalid", accMultiSignAddr.String())
 	}
 
-	// err := t.prepareSignTx(multiSignAccPubKey)
-	// if err != nil {
-	// 	return errors.Wrap(err, "prepareSignTx")
-	// }
+	err := t.prepareSignTx(multiSignAccPubKey)
+	if err != nil {
+		return errors.Wrap(err, "prepareSignTx")
+	}
 
 	pubKey := t.signerPrivateKey.PublicKey()
 

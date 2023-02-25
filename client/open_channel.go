@@ -43,8 +43,8 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	)
 	signOpenChannelMsg := channel.SignMsgRequest{
 		Msg:      openChannelMsg,
-		GasLimit: 21000,
-		GasPrice: "1token",
+		GasLimit: 100000,
+		GasPrice: "0token",
 	}
 
 	strSig, err := channelClient.SignMultisigTxFromOneAccount(signOpenChannelMsg, accountPacked.fromAccount, multiSigPubkey)
@@ -103,17 +103,16 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	if err != nil {
 		return err
 	}
-	txJson, _ := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilderMultiSign)
-	fmt.Print(txJson)
 
 	err = newTx.GenerateMultisig(txBuilderMultiSign, multiSigPubkey, signList)
 	if err != nil {
 		return err
 	}
-	txJson, err = common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilderMultiSign)
+	txJson, err := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilderMultiSign)
 	if err != nil {
 		return err
 	}
+	fmt.Print(txJson)
 
 	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
 	if err != nil {

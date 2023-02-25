@@ -44,8 +44,8 @@ func (server *MessageServer) ValidateOpenChannel(ctx context.Context, req *pb.Se
 	)
 	signOpenChannelMsg := channel.SignMsgRequest{
 		Msg:      openChannelMsg,
-		GasLimit: 21000,
-		GasPrice: "1token",
+		GasLimit: 100000,
+		GasPrice: "0token",
 	}
 
 	//@TODO: check parter sig corret

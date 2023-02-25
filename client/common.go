@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/bank"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -275,7 +272,7 @@ func (client *Client) ResolveAcceptAddWhitelist(clientId int64, msg *models.Mess
 	telMsg := tgbotapi.NewMessage(clientId, "")
 	telMsg.ParseMode = "Markdown"
 
-	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n`%s` has accepted your request to add them to your whitelist.", msg.Users[1])
+	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n`%s` has accepted your request to add them to your whitelist.", msg.Users[0])
 
 	if _, err := client.Bot.Send(telMsg); err != nil {
 		return err
@@ -312,41 +309,4 @@ func (client *Client) Balance(clientId string) (string, error) {
 	}
 
 	return fmt.Sprintf("%s %s", bankRes.Balance.Amount, bankRes.Balance.Denom), nil
-}
-
-func (client *Client) Transfer(fromAccount *account.PrivateKeySerialized, toAddress string, value int64) error {
-	bankClient := bank.NewBank(*client.ClientCtx, "token", 60)
-	request := &bank.TransferRequest{
-		PrivateKey: fromAccount.PrivateKeyToString(),
-		Receiver:   toAddress,
-		Amount:     big.NewInt(value),
-		GasLimit:   200000,
-		GasPrice:   "0token",
-	}
-
-	txBuilder, err := bankClient.TransferRawDataWithPrivateKey(request)
-	if err != nil {
-		return err
-	}
-
-	txJson, err := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilder)
-	if err != nil {
-		return err
-	}
-
-	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
-	if err != nil {
-		return err
-	}
-
-	txHash := common.TxHash(txByte)
-	fmt.Println("txHash", txHash)
-
-	_, err = client.ClientCtx.BroadcastTxCommit(txByte)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

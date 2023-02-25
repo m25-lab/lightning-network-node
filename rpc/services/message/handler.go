@@ -2,7 +2,6 @@ package message
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -77,7 +76,6 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		}, nil
 	} else {
 		fromAddressFromDB, err := server.Client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), toAddress, req.From)
-		fmt.Print(toAddress, req.From)
 		if err != nil {
 			return &pb.SendMessageResponse{
 				Response:  err.Error(),

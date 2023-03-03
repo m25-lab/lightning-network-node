@@ -24,7 +24,7 @@ func main() {
 	config, err := config.LoadConfig()
 	checkErr(err)
 
-	node, err := node.New(&config)
+	node, err := node.New(config)
 	checkErr(err)
 	defer node.CleanUp()
 

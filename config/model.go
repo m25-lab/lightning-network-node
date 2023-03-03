@@ -1,13 +1,15 @@
 package config
 
 type Config struct {
-	Database DatabaseConfig
-	Node     NodeConfig
-	Telegram Telegram
-	LNode    LNode
+	Database  Database
+	Node      Node
+	Telegram  Telegram
+	LNode     LNode
+	Kafka     Kafka
+	Corechain CoreChain
 }
 
-type DatabaseConfig struct {
+type Database struct {
 	Host     string
 	User     string
 	Password string
@@ -15,7 +17,7 @@ type DatabaseConfig struct {
 	Dbname   string
 }
 
-type NodeConfig struct {
+type Node struct {
 	ChainId       string
 	Endpoint      string
 	CoinType      uint64
@@ -29,4 +31,12 @@ type Telegram struct {
 
 type LNode struct {
 	External string
+}
+
+type Kafka struct {
+	Brokers []string
+}
+
+type CoreChain struct {
+	Endpoint string
 }

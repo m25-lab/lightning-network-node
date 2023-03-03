@@ -18,7 +18,7 @@ type MongoDB struct {
 	MessageCollection    *mongo.Collection
 }
 
-func Connect(ctx context.Context, configs *config.DatabaseConfig) (*MongoDB, error) {
+func Connect(ctx context.Context, configs *config.Database) (*MongoDB, error) {
 	connectionString := fmt.Sprintf("mongodb+srv://%s:%s@%s/?retryWrites=true&w=majority",
 		configs.User, configs.Password, configs.Host)
 

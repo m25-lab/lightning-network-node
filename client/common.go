@@ -112,7 +112,7 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 	}
 
 	//@todo: create message
-	data, err := json.Marshal(models.AddWhitelistData{
+	payload, err := json.Marshal(models.AddWhitelistData{
 		Pubkey: acc.PublicKey().String(),
 	})
 	if err != nil {
@@ -124,9 +124,10 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 		OriginalID: messageId,
 		ChannelID:  "",
 		Action:     models.AddWhitelist,
-		Data:       string(data),
+		Data:       string(payload),
 		Owner:      acc.AccAddress().String(),
 		Users:      []string{acc.AccAddress().String() + "@" + client.Node.Config.LNode.External, toAddress},
+		IsReplied:  false,
 	}
 	err = client.Node.Repository.Message.InsertOne(context.Background(), &message)
 	if err != nil {
@@ -135,23 +136,20 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 
 	//@todo: send message
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
-	if err != nil {
-		return nil, err
-	}
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       message.ID.Hex(),
-		ChannelId:       message.ChannelID,
+		ChannelID:       message.ChannelID,
 		Action:          message.Action,
-		Data:            string(data),
+		Data:            string(payload),
 		From:            acc.AccAddress().String() + "@" + client.Node.Config.LNode.External,
 		To:              toAddress,
-		AcceptMessageId: "",
+		ReliedMessageId: "",
 	})
 	if err != nil {
 		return nil, err
 	}
 	if response.ErrorCode != "" {
-		return nil, errors.New(response.ErrorCode)
+		return nil, errors.New(response.ErrorCode + ": " + response.Response)
 	}
 
 	return &message, nil
@@ -192,6 +190,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 		ID:             primitive.NewObjectID(),
 		Owner:          fromAccount.AccAddress().String(),
 		PartnerAddress: reliedMessage.Users[0],
+		PartnerPubkey:  addWhitelist.Pubkey,
 		MultiAddress:   multiAddr,
 		MultiPubkey:    "",
 	}
@@ -201,7 +200,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	}
 
 	//@todo: create message
-	data, err := json.Marshal(models.AddWhitelistData{
+	payload, err := json.Marshal(models.AddWhitelistData{
 		Pubkey: fromAccount.PublicKey().String(),
 	})
 	if err != nil {
@@ -209,15 +208,23 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	}
 	ID := primitive.NewObjectID()
 	savedMessage := models.Message{
-		ID:         ID,
-		OriginalID: ID,
-		ChannelID:  "",
-		Action:     models.AcceptAddWhitelist,
-		Data:       string(data),
-		Owner:      fromAccount.AccAddress().String(),
-		Users:      []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0]},
+		ID:              ID,
+		OriginalID:      ID,
+		ChannelID:       "",
+		Action:          models.AcceptAddWhitelist,
+		Data:            string(payload),
+		Owner:           fromAccount.AccAddress().String(),
+		Users:           []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0]},
+		ReliedMessageId: reliedMessage.ID.Hex(),
+		IsReplied:       false,
 	}
 	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	reliedMessage.IsReplied = true
+	err = client.Node.Repository.Message.Update(context.Background(), reliedMessage.ID, reliedMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -226,18 +233,18 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       savedMessage.ID.Hex(),
-		ChannelId:       reliedMessage.ChannelID,
+		ChannelID:       reliedMessage.ChannelID,
 		Action:          models.AcceptAddWhitelist,
-		Data:            string(data),
+		Data:            string(payload),
 		From:            fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
 		To:              reliedMessage.Users[0],
-		AcceptMessageId: reliedMessage.OriginalID.Hex(),
+		ReliedMessageId: reliedMessage.OriginalID.Hex(),
 	})
 	if err != nil {
 		return nil, err
 	}
 	if response.ErrorCode != "" {
-		return nil, errors.New(response.ErrorCode)
+		return nil, errors.New(response.ErrorCode + ":" + response.Response)
 	}
 
 	return &savedMessage, nil

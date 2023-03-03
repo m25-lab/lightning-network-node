@@ -156,9 +156,6 @@ func (b *Bank) TransferRawDataAndBroadcast(param *TransferRequest) (*sdk.TxRespo
 		panic(err)
 	}
 
-	txHash := common.TxHash(txByte)
-	fmt.Println("txHash", txHash)
-
 	fmt.Println(ethCommon.BytesToHash(txByte).String())
 
 	return b.rpcClient.BroadcastTxCommit(txByte)

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type MessageRepoImplMongo struct {
@@ -83,4 +84,36 @@ func (mongo *MessageRepoImplMongo) UpdateTelegramChatId(ctx context.Context, id 
 	}
 
 	return nil
+}
+
+func (mongo *MessageRepoImplMongo) Update(ctx context.Context, id primitive.ObjectID, message *models.Message) error {
+	updatePayload := bson.M{
+		"$set": bson.M{
+			"action":           message.Action,
+			"telegram_chat_id": message.TelegramChatId,
+			"is_replied":       message.IsReplied,
+		},
+	}
+	_, err := mongo.Db.Collection(Message).UpdateByID(ctx, id, updatePayload)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (mongo *MessageRepoImplMongo) FindOneByChannelID(ctx context.Context, owner string, ChannelID string) (*models.Message, error) {
+	message := models.Message{}
+
+	//get last message
+	response := mongo.Db.Collection(Message).FindOne(
+		ctx,
+		bson.M{"channel_id": ChannelID, "owner": owner},
+		options.FindOne().SetSort(bson.M{"$natural": -1}),
+	)
+	if err := response.Decode(&message); err != nil {
+		return nil, err
+	}
+
+	return &message, nil
 }

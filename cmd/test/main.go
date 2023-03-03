@@ -11,8 +11,8 @@ func main() {
 	// partBCommitment, addressB, signature := client.CreateCommitmentFromB(partACommitment, addressA, signature, "secret from B")
 	// client.StoreCommitmentFromA(partBCommitment, addressB, signature)
 
-	// channelId := client.OpenChannelFromA(50, 50, 1)
-	// client.OpenChannelFromB(channelId)
+	// ChannelID := client.OpenChannelFromA(50, 50, 1)
+	// client.OpenChannelFromB(ChannelID)
 
 	// partACommitment, addressA, signature = client.CreateCommitmentFromA(40, 60, "secret from AA", 10, 1)
 	// partBCommitment, addressB, signature = client.CreateCommitmentFromB(partACommitment, addressA, signature, "secret from BB")

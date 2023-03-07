@@ -117,3 +117,19 @@ func (mongo *MessageRepoImplMongo) FindOneByChannelID(ctx context.Context, owner
 
 	return &message, nil
 }
+
+func (mongo *MessageRepoImplMongo) FindOneByChannelIDWithAction(ctx context.Context, owner string, ChannelID string, Action string) (*models.Message, error) {
+	message := models.Message{}
+
+	//get last message
+	response := mongo.Db.Collection(Message).FindOne(
+		ctx,
+		bson.M{"channel_id": ChannelID, "owner": owner, "action": Action},
+		options.FindOne().SetSort(bson.M{"$natural": -1}),
+	)
+	if err := response.Decode(&message); err != nil {
+		return nil, err
+	}
+
+	return &message, nil
+}

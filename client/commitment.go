@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, amount int64) (*models.Message, error) {
+func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64) (*models.Message, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
 	//get partner hashcode
@@ -36,9 +36,9 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 	commitmentMsg := channelClient.CreateCommitmentMsg(
 		multisigAddr,
 		accountPacked.toAccount.AccAddress().String(),
-		0,
+		fromAmount,
 		accountPacked.fromAccount.AccAddress().String(),
-		amount,
+		toAmount,
 		exchangeHashcodeData.PartnerHashcode,
 	)
 
@@ -56,7 +56,7 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 	}
 
 	//create ln message
-	myCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
+	partnerCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
 		Creator:          commitmentMsg.Creator,
 		ChannelID:        commitmentMsg.ChannelID,
 		From:             commitmentMsg.From,
@@ -91,7 +91,7 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 		MessageId: messageId.Hex(),
 		ChannelID: savedMessage.ChannelID,
 		Action:    models.ExchangeCommitment,
-		Data:      string(myCommitmentPayload),
+		Data:      string(partnerCommitmentPayload),
 		From:      accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
 		To:        accountPacked.toAccount.AccAddress().String() + "@" + accountPacked.toEndpoint,
 	})
@@ -99,25 +99,24 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 		return nil, err
 	}
 	if reponse.ErrorCode != "" {
-		return nil, errors.New(reponse.ErrorCode)
+		return nil, errors.New(reponse.ErrorCode + ":" + reponse.Response)
 	}
-
-	partnerCommitmentPayload := models.CreateCommitmentData{}
-	err = json.Unmarshal([]byte(reponse.Response), &partnerCommitmentPayload)
+	myCommitmentPayload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(reponse.Response), &myCommitmentPayload)
 	if err != nil {
 		return nil, err
 	}
 
 	//check partner commitment
-	if (partnerCommitmentPayload.Creator != commitmentMsg.Creator) ||
-		(partnerCommitmentPayload.ChannelID != commitmentMsg.ChannelID) ||
-		(partnerCommitmentPayload.From != commitmentMsg.From) ||
-		(partnerCommitmentPayload.Timelock != commitmentMsg.Timelock) ||
-		(partnerCommitmentPayload.ToTimelockAddr != commitmentMsg.ToHashlockAddr) ||
-		(partnerCommitmentPayload.ToHashlockAddr != commitmentMsg.ToTimelockAddr) ||
-		(partnerCommitmentPayload.CoinToCreator != commitmentMsg.CoinToHtlc.Amount.Int64()) ||
-		(partnerCommitmentPayload.CoinToHtlc != commitmentMsg.CoinToCreator.Amount.Int64()) ||
-		(partnerCommitmentPayload.Hashcode != exchangeHashcodeData.MyHashcode) {
+	if (myCommitmentPayload.Creator != commitmentMsg.Creator) ||
+		(myCommitmentPayload.ChannelID != commitmentMsg.ChannelID) ||
+		(myCommitmentPayload.From != commitmentMsg.From) ||
+		(myCommitmentPayload.Timelock != commitmentMsg.Timelock) ||
+		(myCommitmentPayload.ToTimelockAddr != commitmentMsg.ToHashlockAddr) ||
+		(myCommitmentPayload.ToHashlockAddr != commitmentMsg.ToTimelockAddr) ||
+		(myCommitmentPayload.CoinToCreator != commitmentMsg.CoinToHtlc.Amount.Int64()) ||
+		(myCommitmentPayload.CoinToHtlc != commitmentMsg.CoinToCreator.Amount.Int64()) ||
+		(myCommitmentPayload.Hashcode != exchangeHashcodeData.MyHashcode) {
 		return nil, errors.New("partner commitment is not match")
 	}
 

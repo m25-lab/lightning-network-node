@@ -50,6 +50,11 @@ func (a *Account) CreateMulSigAccountFromTwoAccount(account1, account2 cryptoTyp
 	pks := make([]cryptoTypes.PubKey, 2)
 	pks[0] = account1
 	pks[1] = account2
+
+	if pks[0].Address().String() > pks[1].Address().String() {
+		pks[0], pks[1] = pks[1], pks[0]
+	}
+
 	pk := multisig.NewLegacyAminoPubKey(threshold, pks)
 	addr := types.AccAddress(pk.Address())
 	return addr.String(), pk, nil

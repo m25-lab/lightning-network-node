@@ -15,6 +15,7 @@ import (
 	"github.com/evmos/ethermint/encoding"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/channel/app"
+	channeltypes "github.com/m25-lab/channel/x/channel/types"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/node"
@@ -22,7 +23,8 @@ import (
 )
 
 type L1RpcClient struct {
-	bank banktypes.QueryClient
+	bank    banktypes.QueryClient
+	channel channeltypes.QueryClient
 }
 type Client struct {
 	Node      *node.LightningNode
@@ -73,6 +75,7 @@ func New(node *node.LightningNode) (*Client, error) {
 		bot,
 		&L1RpcClient{
 			banktypes.NewQueryClient(l1Conn),
+			channeltypes.NewQueryClient(l1Conn),
 		},
 		&ClientCtx,
 	}, nil
@@ -114,7 +117,7 @@ func (client *Client) RunTelegramBot() error {
 					flagUpdateTelmsg = true
 				}
 			}
-		} else if update.Message.Text != "" && update.Message.IsCommand() {
+		} else if update.Message.IsCommand() {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "")
 			clientId := strconv.FormatInt(update.Message.From.ID, 10)
 
@@ -161,11 +164,34 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = fmt.Sprintf("*Whitelist:* \n %s", strWhitelist)
 				}
 			case "balance":
-				balance, err := client.Balance(clientId)
+				account, err := client.CurrentAccount(clientId)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				balance, err := client.Balance(account.AccAddress().String())
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("💰 *Balance:* `%s`", balance)
+					msg.Text = fmt.Sprintf("💰 *Balance:* `%d`", balance)
+				}
+			case "channel_balance":
+				balance, err := client.ChannelBalance(clientId, update.Message.CommandArguments())
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("Channel ID: `%s` \n My balance: `%d` \n Partner balance: `%d`", update.Message.CommandArguments(), balance.MyBalance, balance.PartnerBalance)
+				}
+			case "transfer":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				amount, err := strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				err = client.Transfer(clientId, params[0], amount)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
 			case "ln_transfer":
 				params := strings.Split(update.Message.CommandArguments(), " ")
@@ -177,17 +203,18 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("✅ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
+					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
 			default:
 				msg.Text = "I don't know that command"
 			}
-
+		} else {
+			continue
 		}
 		msg.ParseMode = "Markdown"
 		telMsg, err := client.Bot.Send(msg)
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 
 		if flagUpdateTelmsg {

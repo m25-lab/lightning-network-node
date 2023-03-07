@@ -14,8 +14,8 @@ import (
 func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized) (*pb.SendMessageResponse, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
 
-	var partnerCommitmentPayload models.CreateCommitmentData
-	if err := json.Unmarshal([]byte(req.Data), &partnerCommitmentPayload); err != nil {
+	var myCommitmentPayload models.CreateCommitmentData
+	if err := json.Unmarshal([]byte(req.Data), &myCommitmentPayload); err != nil {
 		return &pb.SendMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
@@ -42,29 +42,46 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		return nil, err
 	}
 
-	if exchangeHashcodeData.MyHashcode != partnerCommitmentPayload.Hashcode ||
-		partnerCommitmentPayload.From != multisigAddr ||
-		partnerCommitmentPayload.ToTimelockAddr != toAccount.AccAddress().String() ||
-		partnerCommitmentPayload.ToHashlockAddr != fromAccount.AccAddress().String() ||
-		partnerCommitmentPayload.Creator != multisigAddr ||
-		partnerCommitmentPayload.ChannelID != multisigAddr+":token:1" ||
-		partnerCommitmentPayload.Timelock != 100 ||
-		partnerCommitmentPayload.CoinToCreator != 0 {
+	if exchangeHashcodeData.MyHashcode != myCommitmentPayload.Hashcode ||
+		myCommitmentPayload.From != multisigAddr ||
+		myCommitmentPayload.ToTimelockAddr != toAccount.AccAddress().String() ||
+		myCommitmentPayload.ToHashlockAddr != fromAccount.AccAddress().String() ||
+		myCommitmentPayload.Creator != multisigAddr ||
+		myCommitmentPayload.ChannelID != multisigAddr+":token:1" ||
+		myCommitmentPayload.Timelock != 100 {
 		return &pb.SendMessageResponse{
 			Response:  "partner hashcode is not correct",
 			ErrorCode: "1006",
 		}, nil
 	}
 
+	// save my commitment
 	//@Todo check signature
+	messageId := primitive.NewObjectID()
+	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
+		ID:         messageId,
+		OriginalID: messageId,
+		ChannelID:  req.ChannelID,
+		Action:     models.ExchangeCommitment,
+		Owner:      toAccount.AccAddress().String(),
+		Data:       req.Data,
+		Users:      []string{req.To, req.From},
+		IsReplied:  false,
+	})
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
 
 	channelClient := channel.NewChannel(*server.Client.ClientCtx)
 	commitmentMsg := channelClient.CreateCommitmentMsg(
 		multisigAddr,
 		fromAccount.AccAddress().String(),
-		partnerCommitmentPayload.CoinToHtlc,
+		myCommitmentPayload.CoinToHtlc,
 		toAccount.AccAddress().String(),
-		partnerCommitmentPayload.CoinToCreator,
+		myCommitmentPayload.CoinToCreator,
 		exchangeHashcodeData.PartnerHashcode,
 	)
 	signCommitmentMsg := channel.SignMsgRequest{
@@ -81,7 +98,7 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		}, nil
 	}
 
-	myCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
+	partnerCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
 		Creator:          commitmentMsg.Creator,
 		ChannelID:        commitmentMsg.ChannelID,
 		From:             commitmentMsg.From,
@@ -100,27 +117,8 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		}, nil
 	}
 
-	// save my commitment
-	messageId := primitive.NewObjectID()
-	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
-		ID:         messageId,
-		OriginalID: messageId,
-		ChannelID:  req.ChannelID,
-		Action:     models.ExchangeCommitment,
-		Owner:      toAccount.AccAddress().String(),
-		Data:       string(myCommitmentPayload),
-		Users:      []string{req.To, req.From},
-		IsReplied:  false,
-	})
-	if err != nil {
-		return &pb.SendMessageResponse{
-			Response:  err.Error(),
-			ErrorCode: "1006",
-		}, nil
-	}
-
 	return &pb.SendMessageResponse{
-		Response:  string(myCommitmentPayload),
+		Response:  string(partnerCommitmentPayload),
 		ErrorCode: "",
 	}, nil
 }

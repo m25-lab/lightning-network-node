@@ -18,6 +18,12 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
+type ChannelBalanceStruct struct {
+	ChannelId      string `json:"channel_id"`
+	MyBalance      int64  `json:"my_balance"`
+	PartnerBalance int64  `json:"partner_balance"`
+}
+
 func (client *Client) CreateConn(endpoint string) *grpc.ClientConn {
 	conn, err := grpc.Dial(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -294,19 +300,43 @@ func (client *Client) ListWhitelist(clientId string) ([]models.Whitelist, error)
 	return whitelists, nil
 }
 
-func (client *Client) Balance(clientId string) (string, error) {
-	account, err := client.CurrentAccount(clientId)
-	if err != nil {
-		return "", err
-	}
-
+func (client *Client) Balance(address string) (int64, error) {
 	bankRes, err := client.l1Client.bank.Balance(
 		context.Background(),
-		&bankTypes.QueryBalanceRequest{Address: account.AccAddress().String(), Denom: "token"},
+		&bankTypes.QueryBalanceRequest{Address: address, Denom: "token"},
 	)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	return fmt.Sprintf("%s %s", bankRes.Balance.Amount, bankRes.Balance.Denom), nil
+	return bankRes.Balance.Amount.Int64(), nil
+}
+
+func (client *Client) ChannelBalance(clientId string, channelID string) (*ChannelBalanceStruct, error) {
+	currentAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return nil, nil
+	}
+
+	lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		currentAccount.AccAddress().String(),
+		channelID,
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ChannelBalanceStruct{
+		ChannelId:      channelID,
+		MyBalance:      payload.CoinToHtlc,
+		PartnerBalance: payload.CoinToCreator,
+	}, nil
 }

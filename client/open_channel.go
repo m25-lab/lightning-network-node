@@ -38,8 +38,8 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 		multisigAddr,
 		accountPacked.fromAccount.AccAddress().String(),
 		accountPacked.toAccount.AccAddress().String(),
-		exchangeCommitmentData.CoinToCreator,
 		exchangeCommitmentData.CoinToHtlc,
+		exchangeCommitmentData.CoinToCreator,
 	)
 	signOpenChannelMsg := channel.SignMsgRequest{
 		Msg:      openChannelMsg,
@@ -112,16 +112,16 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	if err != nil {
 		return err
 	}
-	fmt.Print(txJson)
 
 	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
 	if err != nil {
 		return err
 	}
-	_, err = client.ClientCtx.BroadcastTx(txByte)
+	broadcastResponse, err := client.ClientCtx.BroadcastTx(txByte)
 	if err != nil {
 		return err
 	}
+	fmt.Println("\n broadcast open channel response: ", broadcastResponse)
 
 	return nil
 }

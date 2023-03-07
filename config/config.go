@@ -6,7 +6,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LoadConfig() (Config, error) {
+var configs *Config
+
+func LoadConfig() (*Config, error) {
+	if configs != nil {
+		return configs, nil
+	}
+
 	//Path to config file
 	viper.AddConfigPath(".")
 	viper.SetConfigName("config")
@@ -18,13 +24,13 @@ func LoadConfig() (Config, error) {
 	viper.SetDefault("database.dbname", "testing")
 
 	if err := viper.ReadInConfig(); err != nil {
-		return Config{}, err
+		return nil, err
 	}
 
-	var configs Config
-	err := viper.Unmarshal(&configs)
-	if err != nil {
-		return Config{}, err
+	configs := &Config{}
+	if err := viper.Unmarshal(configs); err != nil {
+		configs = nil
+		return configs, err
 	}
 
 	return configs, nil

@@ -20,5 +20,8 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
-# Local eviroment vairable
+# Local eviroment variable
 .env.local
+
+# Ignore log file
+./log/*

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/m25-lab/lightning-network-node/tools/crypto"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -278,7 +281,7 @@ func (client *Client) ResolveAcceptAddWhitelist(clientId int64, msg *models.Mess
 	telMsg := tgbotapi.NewMessage(clientId, "")
 	telMsg.ParseMode = "Markdown"
 
-	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n`%s` has accepted your request to add them to your whitelist.", msg.Users[0])
+	telMsg.Text = fmt.Sprintf("✅ *Whitelist request accepted*\n `%s` has accepted your request to add them to your whitelist.", msg.Users[0])
 
 	if _, err := client.Bot.Send(telMsg); err != nil {
 		return err
@@ -339,4 +342,123 @@ func (client *Client) ChannelBalance(clientId string, channelID string) (*Channe
 		MyBalance:      payload.CoinToHtlc,
 		PartnerBalance: payload.CoinToCreator,
 	}, nil
+}
+
+func (client *Client) RequestInvoice(clientId int64, msg *models.Message) error {
+	telMsg := tgbotapi.NewMessage(clientId, "")
+	telMsg.ParseMode = "Markdown"
+
+	var invoice models.InvoiceData
+	err := json.Unmarshal([]byte(msg.Data), &invoice)
+	if err != nil {
+		return err
+	}
+
+	telMsg.Text = fmt.Sprintf("👋 *Request invoice*\n `%s` request invoice to send you %d token. Do you want to accept ?", msg.Users[0], invoice.Amount)
+
+	telMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("%s:%s", models.AcceptRequestInvoice, msg.ID.Hex())),
+		),
+	)
+
+	if _, err := client.Bot.Send(telMsg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (client *Client) CallbackAcceptInvoice(clientId int64, msg *models.Message) error {
+	telMsg := tgbotapi.NewMessage(clientId, "")
+	telMsg.ParseMode = "Markdown"
+
+	var invoice models.InvoiceData
+	err := json.Unmarshal([]byte(msg.Data), &invoice)
+	if err != nil {
+		return err
+	}
+
+	telMsg.Text = fmt.Sprintf("✅ *Accepted request invoice*\n `%s` accept request invoice to receive you %d token with hash %s", msg.Users[0], invoice.Amount, invoice.HashSecret)
+
+	if _, err := client.Bot.Send(telMsg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (client *Client) AcceptRequestInvoice(clientId, messageId string) (*models.InvoiceData, error) {
+	fromAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	reliedMessage, err := client.Node.Repository.Message.FindOneByOriginalID(
+		context.Background(),
+		fromAccount.AccAddress().String(),
+		messageId,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var invoice models.InvoiceData
+	err = json.Unmarshal([]byte(reliedMessage.Data), &invoice)
+	if err != nil {
+		return nil, err
+	}
+
+	senderAddress, err := client.Node.Repository.Address.FindByAddress(
+		context.Background(),
+		invoice.From,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	hashSecret, err := crypto.CryptoEngine.Hash(reliedMessage.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	invoice.HashSecret = hashSecret
+	hashedInvoiceData, err := json.Marshal(invoice)
+	if err != nil {
+		return nil, err
+	}
+
+	ID := primitive.NewObjectID()
+	savedMessage := models.Message{
+		ID:              ID,
+		OriginalID:      ID,
+		Action:          models.AcceptRequestInvoice,
+		Data:            string(hashedInvoiceData),
+		Owner:           fromAccount.AccAddress().String(),
+		Users:           []string{fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External, reliedMessage.Users[0] + "@" + client.Node.Config.LNode.External},
+		ReliedMessageId: reliedMessage.ID.Hex(),
+		IsReplied:       false,
+	}
+	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	reliedMessage.IsReplied = true
+	err = client.Node.Repository.Message.Update(context.Background(), reliedMessage.ID, reliedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	senderClientID, err := strconv.Atoi(senderAddress.ClientId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.CallbackAcceptInvoice(int64(senderClientID), &savedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &invoice, nil
 }

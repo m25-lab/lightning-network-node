@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/m25-lab/lightning-network-node/tools/crypto"
 	"sync"
 
 	"github.com/m25-lab/lightning-network-node/client"
@@ -31,6 +32,8 @@ func main() {
 	fmt.Printf("Running RPC Server...\n")
 	rpcServer, err := rpc.New(node)
 	checkErr(err)
+
+	crypto.CryptoEngine = crypto.Crypto{SuperKey: config.CryptoEngine.SuperKey}
 
 	go func() {
 		rpcServer.RunGateway()

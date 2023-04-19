@@ -1,12 +1,13 @@
 package config
 
 type Config struct {
-	Database  Database
-	Node      Node
-	Telegram  Telegram
-	LNode     LNode
-	Kafka     Kafka
-	Corechain CoreChain
+	Database     Database
+	Node         Node
+	Telegram     Telegram
+	LNode        LNode
+	Kafka        Kafka
+	Corechain    CoreChain
+	CryptoEngine CryptoEngine
 }
 
 type Database struct {
@@ -39,4 +40,8 @@ type Kafka struct {
 
 type CoreChain struct {
 	Endpoint string
+}
+
+type CryptoEngine struct {
+	SuperKey string
 }

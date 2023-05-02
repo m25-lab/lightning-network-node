@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package routing;
+
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
+
+service Routing {
+  rpc ProcessRREQ (RREQMessage) returns (RoutingResponse);
+  rpc ProcessRREP (RREPMessage) returns (RoutingResponse);
+  rpc ProcessInvoiceSecret (InvoiceSecretMessage) returns (RoutingResponse);
+}
+
+message InvoiceSecretMessage {
+  string invoice = 1;
+  string secret = 2;
+  string dest = 3;
+}
+
+message RREQMessage {
+  string origin = 1;
+  string destination = 2;
+  int32 sequence = 3;
+  int32 hops = 4;
+}
+
+message RREPMessage {
+  string origin = 1;
+  string destination = 2;
+  int32 sequence = 3;
+  int32 hops = 4;
+}
+
+message RoutingResponse {
+  string response = 1;
+  string error_code = 2;
+}

@@ -11,7 +11,7 @@ service Routing {
 }
 
 message InvoiceSecretMessage {
-  string invoice = 1;
+  string hashcode = 1;
   string secret = 2;
   string dest = 3;
 }

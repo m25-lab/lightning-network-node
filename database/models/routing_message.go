@@ -43,3 +43,8 @@ type ReceiverCommitment struct {
 	Multisig          string `json:"multisig"`
 	ReceiverSignature string `json:"receiver_signature"`
 }
+
+type FwdSecret struct {
+	HashcodeDest string `json:"hashcode_dest"`
+	Secret       string `json:"secret"`
+}

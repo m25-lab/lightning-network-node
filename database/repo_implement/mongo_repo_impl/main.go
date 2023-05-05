@@ -8,4 +8,5 @@ const (
 	Address            string = "addresses"
 	SenderCommitment   string = "senderCommitments"
 	ReceiverCommitment string = "receiverCommitments"
+	FwdSecret          string = "fwdSecrets"
 )

@@ -23,6 +23,7 @@ type Repository struct {
 	Address       repository.AddressRepo
 	FwdCommitment repository.FwdCommitmentRepo
 	FwdSecret     repository.FwdSecretRepo
+	RoutingEntry  repository.RoutingEntry
 }
 
 func New(config *config.Config) (*LightningNode, error) {
@@ -34,6 +35,7 @@ func New(config *config.Config) (*LightningNode, error) {
 	repository := &Repository{
 		FwdCommitment: mongo_repo_impl.NewFwdCommitmentRepo(database.Client.Database(config.Database.Dbname)),
 		FwdSecret:     mongo_repo_impl.NewFwdSecretRepo(database.Client.Database(config.Database.Dbname)),
+		RoutingEntry:  mongo_repo_impl.NewRoutingEntryRepo(database.Client.Database(config.Database.Dbname)),
 		Commitment:    mongo_repo_impl.NewCommitmentRepo(database.Client.Database(config.Database.Dbname)),
 		Channel:       mongo_repo_impl.NewChannelRepo(database.Client.Database(config.Database.Dbname)),
 		Message:       mongo_repo_impl.NewMessageRepo(database.Client.Database(config.Database.Dbname)),

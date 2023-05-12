@@ -27,6 +27,8 @@ type CreateCommitmentData struct {
 	CoinToHtlc       int64  `json:"coin_to_htlc"`
 	Hashcode         string `json:"hashcode"`
 	PartnerSignature string `json:"partner_signature"`
+	FwdDest          string `json:"fwd_dest,omitempty"`
+	HashcodeDest     string `json:"hashcode_dest,omitempty"`
 }
 
 type OpenChannelData struct {

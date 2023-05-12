@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64) (*models.Message, error) {
+func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, fwdDest *string, hashcodeDest *string) (*models.Message, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
 	//get partner hashcode
@@ -56,7 +56,7 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 	}
 
 	//create ln message
-	partnerCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
+	msg := models.CreateCommitmentData{
 		Creator:          commitmentMsg.Creator,
 		ChannelID:        commitmentMsg.ChannelID,
 		From:             commitmentMsg.From,
@@ -67,7 +67,14 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 		CoinToHtlc:       commitmentMsg.CoinToHtlc.Amount.Int64(),
 		Hashcode:         commitmentMsg.Hashcode,
 		PartnerSignature: strSig,
-	})
+	}
+
+	if fwdDest != nil && hashcodeDest != nil {
+		msg.HashcodeDest = *hashcodeDest
+		msg.FwdDest = *fwdDest
+	}
+
+	partnerCommitmentPayload, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
 	}

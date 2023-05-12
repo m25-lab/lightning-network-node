@@ -12,6 +12,17 @@ type RoutingEntryRepoImplMongo struct {
 	Db *mongo.Database
 }
 
+func (mongo RoutingEntryRepoImplMongo) FindDestByHash(ctx context.Context, hash string) (*string, error) {
+	result := models.RoutingEntry{}
+
+	response := mongo.Db.Collection(RoutingEntry).FindOne(ctx, bson.M{"hashcode_dest": hash})
+	if err := response.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result.Dest, nil
+}
+
 func (mongo RoutingEntryRepoImplMongo) InsertEntry(ctx context.Context, input *models.RoutingEntry) error {
 	if _, err := mongo.Db.Collection(RoutingEntry).InsertOne(ctx, input); err != nil {
 		return err

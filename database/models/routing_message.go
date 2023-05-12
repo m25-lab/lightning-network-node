@@ -48,6 +48,13 @@ type ReceiverCommitment struct {
 	Multisig       string `json:"multisig" bson:"multisig"`
 }
 
+// TODO: Proto
+type FwdMessage struct {
+	MsgSender string `bson:"msg_sender" json:"msg_sender"`
+	Sig       string `bson:"sig"`
+	Data      string `bson:"data" json:"data"`
+}
+
 type FwdSecret struct {
 	HashcodeDest string `bson:"hashcode_dest" json:"hashcode_dest"`
 	Secret       string `bson:"secret" json:"secret"`

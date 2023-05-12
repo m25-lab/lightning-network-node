@@ -87,7 +87,7 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		if req.Action == models.ExchangeHashcode {
 			return server.ValidateExchagneHashcode(ctx, req, fromAccount, toAccount)
 		} else if req.Action == models.ExchangeCommitment {
-			return server.ValidateExchangeCommitment(ctx, req, fromAccount, toAccount)
+			return server.ValidateExchangeCommitment(ctx, req, fromAccount, toAccount, existToAddress.ClientId, req.To)
 		} else if req.Action == models.OpenChannel {
 			return server.ValidateOpenChannel(ctx, req, fromAccount, toAccount)
 		}

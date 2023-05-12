@@ -199,7 +199,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				}
-				err = client.LnTransfer(clientId, params[0], amount)
+				err = client.LnTransfer(clientId, params[0], amount, nil, nil)
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {

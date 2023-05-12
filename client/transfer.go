@@ -24,6 +24,8 @@ func (client *Client) LnTransfer(
 	clientId string,
 	to string,
 	amount int64,
+	fwdDest *string,
+	hashcodeDest *string,
 ) error {
 	//create account packed
 	fromAccount, err := client.CurrentAccount(clientId)
@@ -107,7 +109,7 @@ func (client *Client) LnTransfer(
 		return err
 	}
 
-	_, err = client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount)
+	_, err = client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount, fwdDest, hashcodeDest)
 	if err != nil {
 		return err
 	}

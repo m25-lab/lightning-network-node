@@ -10,7 +10,7 @@ import (
 
 func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingResponse, error) {
 	//check hash
-	err := server.ValidateInvoiceSecret(ctx, req)
+	receiverCommit, err := server.ValidateInvoiceSecret(ctx, req)
 	if err != nil {
 		return &pb.RoutingResponse{
 			Response:  err.Error(),
@@ -33,7 +33,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	destAddr := split[0]
 	toEndpoint := split[1]
 
-	_, err = server.Node.Repository.Address.FindByAddress(ctx, destAddr)
+	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			go func() {
@@ -62,9 +62,18 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 			}, nil
 		}
 	}
-	// if minh la dest, chuyen sang giai doan trade commitment
+	// is dest -> phase commitment
 	go func() {
-
+		amount := receiverCommit.CoinTransfer
+		dest, err := server.Node.Repository.RoutingEntry.FindDestByHash(ctx, req.Hashcode)
+		if err != nil {
+			println("FindDestByHash", err.Error())
+			return
+		}
+		err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, dest, &receiverCommit.HashcodeDest)
+		if err != nil {
+			println("Trade commitment - LnTransfer:", err.Error())
+		}
 	}()
 
 	return &pb.RoutingResponse{

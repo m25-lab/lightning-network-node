@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized) (*pb.SendMessageResponse, error) {
+func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized, clientId string, ownAddr string) (*pb.SendMessageResponse, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
 
 	var myCommitmentPayload models.CreateCommitmentData
@@ -116,7 +116,25 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 			ErrorCode: "1006",
 		}, nil
 	}
-
+	if myCommitmentPayload.FwdDest != "" && myCommitmentPayload.HashcodeDest != "" {
+		if myCommitmentPayload.FwdDest != ownAddr {
+			go func() {
+				//find next
+				nextHop, err := server.Client.Node.Repository.RoutingEntry.FindByDestAndHash(ctx, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
+				if err != nil {
+					println("Fwd Commitment: nextHop-FindByDestAndHash:", err.Error())
+					return
+				}
+				//find receivercommit
+				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, myCommitmentPayload.HashcodeDest)
+				if err != nil {
+					println("Fwd Commitment: rC-FindReceiverCommitByDestHash:", err.Error())
+					return
+				}
+				server.Client.LnTransfer(clientId, nextHop.Next, rC.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
+			}()
+		}
+	}
 	return &pb.SendMessageResponse{
 		Response:  string(partnerCommitmentPayload),
 		ErrorCode: "",

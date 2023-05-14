@@ -5,9 +5,25 @@ package routing;
 option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 service Routing {
+  rpc RequestInvoice (IREQMessage) returns (IREPMessage);
   rpc ProcessRREQ (RREQMessage) returns (RoutingResponse);
   rpc ProcessRREP (RREPMessage) returns (RoutingResponse);
+  rpc ProcessFwdMessage (FwdMessage) returns (FwdMessageResponse);
   rpc ProcessInvoiceSecret (InvoiceSecretMessage) returns (RoutingResponse);
+}
+
+message IREQMessage {
+  int64 amount = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message IREPMessage {
+  string from = 1;
+  string to = 2;
+  string hash = 3;
+  int64 amount = 4;
+  string error_code = 5;
 }
 
 message InvoiceSecretMessage {
@@ -33,4 +49,18 @@ message RREPMessage {
 message RoutingResponse {
   string response = 1;
   string error_code = 2;
+}
+
+message FwdMessageResponse {
+  string response = 1;
+  string error_code = 2;
+}
+
+message FwdMessage {
+  string action = 1;
+  string data = 2;
+  string from = 3;
+  string to = 4;
+  string hashcode_dest = 5;
+  string sig = 6;
 }

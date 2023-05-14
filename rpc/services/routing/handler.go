@@ -2,6 +2,7 @@ package routing
 
 import (
 	"context"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -78,6 +79,33 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 
 	return &pb.RoutingResponse{
 		Response:  "success",
+		ErrorCode: "",
+	}, nil
+}
+
+func (server *RoutingServer) RequestInvoice(ctx context.Context, req *pb.IREQMessage) (*pb.IREPMessage, error) {
+	//TODO: check to address is active
+
+	secret, err := common.RandomSecret()
+	if err != nil {
+		println("RandomSecret:", err.Error())
+		return &pb.IREPMessage{
+			ErrorCode: err.Error(),
+		}, nil
+	}
+	hashcode := common.ToHashCode(secret)
+	server.Node.Repository.Invoice.InsertInvoice(ctx, &models.InvoiceData{
+		Amount: req.Amount,
+		From:   req.From,
+		To:     req.To,
+		Hash:   hashcode,
+		Secret: secret,
+	})
+	return &pb.IREPMessage{
+		From:      req.From,
+		To:        req.To,
+		Hash:      hashcode,
+		Amount:    req.Amount,
 		ErrorCode: "",
 	}, nil
 }

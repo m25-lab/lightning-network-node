@@ -22,8 +22,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RoutingClient interface {
+	RequestInvoice(ctx context.Context, in *IREQMessage, opts ...grpc.CallOption) (*IREPMessage, error)
 	ProcessRREQ(ctx context.Context, in *RREQMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
 	ProcessRREP(ctx context.Context, in *RREPMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
+	ProcessFwdMessage(ctx context.Context, in *FwdMessage, opts ...grpc.CallOption) (*FwdMessageResponse, error)
 	ProcessInvoiceSecret(ctx context.Context, in *InvoiceSecretMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
 }
 
@@ -33,6 +35,15 @@ type routingClient struct {
 
 func NewRoutingClient(cc grpc.ClientConnInterface) RoutingClient {
 	return &routingClient{cc}
+}
+
+func (c *routingClient) RequestInvoice(ctx context.Context, in *IREQMessage, opts ...grpc.CallOption) (*IREPMessage, error) {
+	out := new(IREPMessage)
+	err := c.cc.Invoke(ctx, "/routing.Routing/RequestInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *routingClient) ProcessRREQ(ctx context.Context, in *RREQMessage, opts ...grpc.CallOption) (*RoutingResponse, error) {
@@ -53,6 +64,15 @@ func (c *routingClient) ProcessRREP(ctx context.Context, in *RREPMessage, opts .
 	return out, nil
 }
 
+func (c *routingClient) ProcessFwdMessage(ctx context.Context, in *FwdMessage, opts ...grpc.CallOption) (*FwdMessageResponse, error) {
+	out := new(FwdMessageResponse)
+	err := c.cc.Invoke(ctx, "/routing.Routing/ProcessFwdMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *routingClient) ProcessInvoiceSecret(ctx context.Context, in *InvoiceSecretMessage, opts ...grpc.CallOption) (*RoutingResponse, error) {
 	out := new(RoutingResponse)
 	err := c.cc.Invoke(ctx, "/routing.Routing/ProcessInvoiceSecret", in, out, opts...)
@@ -66,8 +86,10 @@ func (c *routingClient) ProcessInvoiceSecret(ctx context.Context, in *InvoiceSec
 // All implementations must embed UnimplementedRoutingServer
 // for forward compatibility
 type RoutingServer interface {
+	RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error)
 	ProcessRREQ(context.Context, *RREQMessage) (*RoutingResponse, error)
 	ProcessRREP(context.Context, *RREPMessage) (*RoutingResponse, error)
+	ProcessFwdMessage(context.Context, *FwdMessage) (*FwdMessageResponse, error)
 	ProcessInvoiceSecret(context.Context, *InvoiceSecretMessage) (*RoutingResponse, error)
 	mustEmbedUnimplementedRoutingServer()
 }
@@ -76,11 +98,17 @@ type RoutingServer interface {
 type UnimplementedRoutingServer struct {
 }
 
+func (UnimplementedRoutingServer) RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
+}
 func (UnimplementedRoutingServer) ProcessRREQ(context.Context, *RREQMessage) (*RoutingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProcessRREQ not implemented")
 }
 func (UnimplementedRoutingServer) ProcessRREP(context.Context, *RREPMessage) (*RoutingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProcessRREP not implemented")
+}
+func (UnimplementedRoutingServer) ProcessFwdMessage(context.Context, *FwdMessage) (*FwdMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessFwdMessage not implemented")
 }
 func (UnimplementedRoutingServer) ProcessInvoiceSecret(context.Context, *InvoiceSecretMessage) (*RoutingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProcessInvoiceSecret not implemented")
@@ -96,6 +124,24 @@ type UnsafeRoutingServer interface {
 
 func RegisterRoutingServer(s grpc.ServiceRegistrar, srv RoutingServer) {
 	s.RegisterService(&Routing_ServiceDesc, srv)
+}
+
+func _Routing_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IREQMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServer).RequestInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/routing.Routing/RequestInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServer).RequestInvoice(ctx, req.(*IREQMessage))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Routing_ProcessRREQ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -134,6 +180,24 @@ func _Routing_ProcessRREP_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Routing_ProcessFwdMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FwdMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServer).ProcessFwdMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/routing.Routing/ProcessFwdMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServer).ProcessFwdMessage(ctx, req.(*FwdMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Routing_ProcessInvoiceSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InvoiceSecretMessage)
 	if err := dec(in); err != nil {
@@ -160,12 +224,20 @@ var Routing_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*RoutingServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "RequestInvoice",
+			Handler:    _Routing_RequestInvoice_Handler,
+		},
+		{
 			MethodName: "ProcessRREQ",
 			Handler:    _Routing_ProcessRREQ_Handler,
 		},
 		{
 			MethodName: "ProcessRREP",
 			Handler:    _Routing_ProcessRREP_Handler,
+		},
+		{
+			MethodName: "ProcessFwdMessage",
+			Handler:    _Routing_ProcessFwdMessage_Handler,
 		},
 		{
 			MethodName: "ProcessInvoiceSecret",

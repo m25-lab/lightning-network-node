@@ -10,4 +10,5 @@ const (
 	ReceiverCommitment string = "receiverCommitments"
 	FwdSecret          string = "fwdSecrets"
 	RoutingEntry       string = "routingEntries"
+	Invoice            string = "invoices"
 )

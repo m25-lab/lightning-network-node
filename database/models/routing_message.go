@@ -1,5 +1,10 @@
 package models
 
+const (
+	SenderCommit   string = "sender_commitment"
+	ReceiverCommit string = "receiver_commitment"
+)
+
 type RREQMessage struct {
 	Origin      string `bson:"origin"`
 	Destination string `bson:"destination"`
@@ -60,11 +65,12 @@ type ReceiverCommitment struct {
 
 type FwdMessage struct {
 	Action       string `bson:"msg_sender" json:"msg_sender"`
-	Sig          string `bson:"sig"`
+	PartnerSig   string `bson:"partner_sig" json:"partner_sig"`
+	OwnSig       string `bson:"own_sig" json:"own_sig"`
 	Data         string `bson:"data" json:"data"`
-	From         string `bson:"from"`
-	To           string `bson:"to"`
-	HashcodeDest string `bson:"hashcode_dest"`
+	From         string `bson:"from" json:"from"`
+	To           string `bson:"to" json:"to"`
+	HashcodeDest string `bson:"hashcode_dest" json:"hashcode_dest"`
 }
 
 type FwdSecret struct {

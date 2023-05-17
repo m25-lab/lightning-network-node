@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
@@ -40,7 +41,6 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		exchangeHashcodeData.PartnerHashcode,
 		*hashcodeDest,
 	)
-	//TODO: Dang lam!!!!!
 	//create l1 sign message
 	signCommitmentMsg := channel.SignMsgRequest{
 		Msg:      senderCommitmentMsg,
@@ -73,13 +73,66 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	if err != nil {
 		return nil, err
 	}
+	//send rpc (input: sendercommit with sig; output: receivercommit)
 
-	//TODO: save own commit
+	rpcClient := pb.NewRoutingClient(client.CreateConn(accountPacked.toEndpoint))
+	reponse, err := rpcClient.ProcessFwdMessage(context.Background(), &pb.FwdMessage{
+		Action:       models.SenderCommit,
+		Data:         string(partnerCommitmentPayload),
+		From:         accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
+		To:           accountPacked.toAccount.AccAddress().String() + "@" + accountPacked.toEndpoint,
+		HashcodeDest: msg.HashcodeDest,
+		Sig:          strSig,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	//TODO: send rpc (input: sendercommit with sig; output: receivercommit)
+	if reponse.ErrorCode != "" {
+		return nil, errors.New(reponse.ErrorCode + ":" + reponse.Response)
+	}
+	myCommitmentPayload := models.ReceiverCommitment{}
+	err = json.Unmarshal([]byte(reponse.Response), &myCommitmentPayload)
+	if err != nil {
+		return nil, err
+	}
 
-	//TODO: validate save receiverCommit, sign luon if needed
+	//TODO: validate sig response.PartnerSig, myCommitmentPayload
 
-	//TODO: find way to reuse this in hop trung gian, check is dest with hashcodeDest (then to reveal transfer secret)
+	//Build and sign receiver commit
+	receiverCMsg := channelClient.CreateReceiverCommitmentMsg(
+		multisigAddr,
+		accountPacked.toAccount.AccAddress().String(),
+		myCommitmentPayload.CoinToReceiver,
+		myCommitmentPayload.CoinToHTLC,
+		myCommitmentPayload.CoinTransfer,
+		myCommitmentPayload.HashcodeHTLC,
+		myCommitmentPayload.HashcodeDest,
+	)
+
+	signReceiverCommitmentMsg := channel.SignMsgRequest{
+		Msg:      receiverCMsg,
+		GasLimit: 200000,
+		GasPrice: "0token",
+	}
+
+	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, accountPacked.fromAccount, multiSigPubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.Node.Repository.FwdCommitment.InsertFwdMessage(context.Background(), &models.FwdMessage{
+		Action:       models.ReceiverCommit,
+		PartnerSig:   reponse.PartnerSig,
+		OwnSig:       strSigReceiver,
+		Data:         reponse.Response,
+		From:         accountPacked.toAccount.AccAddress().String() + "@" + accountPacked.toEndpoint,
+		To:           accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
+		HashcodeDest: myCommitmentPayload.HashcodeDest,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }

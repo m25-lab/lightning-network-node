@@ -12,6 +12,13 @@ type FwdCommitmentRepoImplMongo struct {
 	Db *mongo.Database
 }
 
+func (mongo *FwdCommitmentRepoImplMongo) InsertFwdMessage(ctx context.Context, sdC *models.FwdMessage) error {
+	if _, err := mongo.Db.Collection(FwdMessage).InsertOne(ctx, sdC); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (mongo *FwdCommitmentRepoImplMongo) InsertSenderCommit(ctx context.Context, sdC *models.SenderCommitment) error {
 	if _, err := mongo.Db.Collection(SenderCommitment).InsertOne(ctx, sdC); err != nil {
 		return err

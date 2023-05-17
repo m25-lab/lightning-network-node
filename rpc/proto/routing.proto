@@ -53,7 +53,8 @@ message RoutingResponse {
 
 message FwdMessageResponse {
   string response = 1;
-  string error_code = 2;
+  string partner_sig = 2;
+  string error_code = 3;
 }
 
 message FwdMessage {

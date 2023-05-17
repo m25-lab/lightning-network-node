@@ -6,6 +6,7 @@ import (
 )
 
 type FwdCommitmentRepo interface {
+	InsertFwdMessage(ctx context.Context, sdC *models.FwdMessage) error
 	InsertSenderCommit(ctx context.Context, sdC *models.SenderCommitment) error
 	InsertReceiverCommit(ctx context.Context, rcC *models.ReceiverCommitment) error
 	FindReceiverCommitByDestHash(ctx context.Context, hash string) (*models.ReceiverCommitment, error)

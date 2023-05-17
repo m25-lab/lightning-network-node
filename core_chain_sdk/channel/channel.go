@@ -137,7 +137,7 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 ) *channelTypes2.MsgReceivercommit {
 	return &channelTypes2.MsgReceivercommit{
 		Creator:   multisigAddr,
-		From:      fromAddr, //TODO: sender or multisig?
+		From:      fromAddr,
 		Channelid: multisigAddr + ":token:1",
 		Cointoreceiver: &types.Coin{
 			Denom:  "token",

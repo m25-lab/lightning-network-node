@@ -63,5 +63,6 @@ message FwdMessage {
   string from = 3;
   string to = 4;
   string hashcode_dest = 5;
-  string sig = 6;
+  string dest = 6;
+  string sig = 7;
 }

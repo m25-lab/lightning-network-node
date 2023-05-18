@@ -264,7 +264,38 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			ErrorCode: "1006",
 		}, nil
 	}
-	//TODO: Check Hashcode Dest in DB to know if self is DEST -> to Reveal secret
+	//find invoice in db, exist => is Dest
+
+	needNext := false
+	invoice, err := server.Node.Repository.Invoice.FindByHash(ctx, req.HashcodeDest)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			needNext = true
+		} else {
+			return &pb.FwdMessageResponse{
+				Response:  err.Error(),
+				ErrorCode: "checkIsDest",
+			}, nil
+		}
+	}
+	if needNext {
+		//find next hop and reuse
+		go func() {
+			nextHop, err := server.Node.Repository.RoutingEntry.FindByDestAndHash(ctx, req.Dest, req.HashcodeDest)
+			if err != nil {
+				println("Missing routing entry for:", req.Dest)
+				return
+			}
+			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.Next, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest)
+			if err != nil {
+				println("Trade fwd commitment - LnTransferMulti:", err.Error())
+			}
+
+		}()
+	} else {
+		//TODO: reveal secret with invoice from DB
+	}
+
 	//TODO: Recheck mentioned phase because DB use FWDMessage
 	return &pb.FwdMessageResponse{
 		Response:   string(partnerCommitmentPayload),

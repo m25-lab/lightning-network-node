@@ -131,7 +131,13 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 					println("Fwd Commitment: rC-FindReceiverCommitByDestHash:", err.Error())
 					return
 				}
-				server.Client.LnTransfer(clientId, nextHop.Next, rC.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
+				rCData := models.ReceiverCommitment{}
+				err = json.Unmarshal([]byte(rC.Data), &rCData)
+				if err != nil {
+					println("Fwd Commitment: nextHop-Unmarshal:", err.Error())
+					return
+				}
+				server.Client.LnTransfer(clientId, nextHop.Next, rCData.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
 			}()
 		}
 	}

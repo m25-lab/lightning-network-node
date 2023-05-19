@@ -2,6 +2,9 @@ package routing
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
@@ -11,8 +14,16 @@ func (server *RoutingServer) ValidateInvoiceSecret(ctx context.Context, req *pb.
 	if err != nil {
 		return nil, err
 	}
-	//TODO:Re hash the secret into destHashcode
 
-	//TODO: Returned value need to contain whole dest of Receiver
-	return rCommit, nil
+	newHash := common.ToHashCode(req.Secret)
+	if newHash != req.Hashcode {
+		return nil, errors.New("secret not match hash")
+	}
+	receiverCommit := models.ReceiverCommitment{}
+	err = json.Unmarshal([]byte(rCommit.Data), &receiverCommit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &receiverCommit, nil
 }

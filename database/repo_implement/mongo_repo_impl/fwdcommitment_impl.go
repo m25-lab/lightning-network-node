@@ -19,24 +19,10 @@ func (mongo *FwdCommitmentRepoImplMongo) InsertFwdMessage(ctx context.Context, s
 	return nil
 }
 
-func (mongo *FwdCommitmentRepoImplMongo) InsertSenderCommit(ctx context.Context, sdC *models.SenderCommitment) error {
-	if _, err := mongo.Db.Collection(SenderCommitment).InsertOne(ctx, sdC); err != nil {
-		return err
-	}
-	return nil
-}
+func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, hash string) (*models.FwdMessage, error) {
+	rcC := models.FwdMessage{}
 
-func (mongo *FwdCommitmentRepoImplMongo) InsertReceiverCommit(ctx context.Context, rcC *models.ReceiverCommitment) error {
-	if _, err := mongo.Db.Collection(ReceiverCommitment).InsertOne(ctx, rcC); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, hash string) (*models.ReceiverCommitment, error) {
-	rcC := models.ReceiverCommitment{}
-
-	response := mongo.Db.Collection(ReceiverCommitment).FindOne(ctx, bson.M{"hashcode_dest": hash})
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.ReceiverCommit, "hash": hash})
 	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}
@@ -44,15 +30,15 @@ func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx contex
 	return &rcC, nil
 }
 
-func (mongo *FwdCommitmentRepoImplMongo) FindSenderCommitByDestHash(ctx context.Context, hash string) (*models.SenderCommitment, error) {
-	sdC := models.SenderCommitment{}
+func (mongo *FwdCommitmentRepoImplMongo) FindSenderCommitByDestHash(ctx context.Context, hash string) (*models.FwdMessage, error) {
+	rcC := models.FwdMessage{}
 
-	response := mongo.Db.Collection(SenderCommitment).FindOne(ctx, bson.M{"hashcode_dest": hash})
-	if err := response.Decode(&sdC); err != nil {
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.SenderCommit, "hash": hash})
+	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}
 
-	return &sdC, nil
+	return &rcC, nil
 }
 
 func (mongo *FwdCommitmentRepoImplMongo) DeleteByDestHash(ctx context.Context, s string) error {

@@ -8,14 +8,14 @@ import (
 
 var configs *Config
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(config *string) (*Config, error) {
 	if configs != nil {
 		return configs, nil
 	}
 
 	//Path to config file
 	viper.AddConfigPath(".")
-	viper.SetConfigName("config")
+	viper.SetConfigName(*config)
 	viper.SetConfigType("yml")
 	viper.AutomaticEnv()
 

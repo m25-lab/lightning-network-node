@@ -64,7 +64,7 @@ type ReceiverCommitment struct {
 }
 
 type FwdMessage struct {
-	Action       string `bson:"msg_sender" json:"msg_sender"`
+	Action       string `bson:"action" json:"action"`
 	PartnerSig   string `bson:"partner_sig" json:"partner_sig"`
 	OwnSig       string `bson:"own_sig" json:"own_sig"`
 	Data         string `bson:"data" json:"data"`

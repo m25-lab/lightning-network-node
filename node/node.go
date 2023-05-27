@@ -16,15 +16,16 @@ type LightningNode struct {
 }
 
 type Repository struct {
-	Commitment    repository.CommitmentRepo
-	Channel       repository.ChannelRepo
-	Message       repository.MessageRepo
-	Whitelist     repository.WhitelistRepo
-	Address       repository.AddressRepo
-	FwdCommitment repository.FwdCommitmentRepo
-	FwdSecret     repository.FwdSecretRepo
-	RoutingEntry  repository.RoutingEntry
-	Invoice       repository.InvoiceRepo
+	Commitment       repository.CommitmentRepo
+	Channel          repository.ChannelRepo
+	Message          repository.MessageRepo
+	Whitelist        repository.WhitelistRepo
+	Address          repository.AddressRepo
+	FwdCommitment    repository.FwdCommitmentRepo
+	FwdSecret        repository.FwdSecretRepo
+	RoutingEntry     repository.RoutingEntry
+	Invoice          repository.InvoiceRepo
+	ExchangeHashcode repository.ExchangeHashcodeRepo
 }
 
 func New(config *config.Config) (*LightningNode, error) {
@@ -34,15 +35,16 @@ func New(config *config.Config) (*LightningNode, error) {
 	}
 
 	repository := &Repository{
-		FwdCommitment: mongo_repo_impl.NewFwdCommitmentRepo(database.Client.Database(config.Database.Dbname)),
-		Invoice:       mongo_repo_impl.NewInvoiceRepo(database.Client.Database(config.Database.Dbname)),
-		FwdSecret:     mongo_repo_impl.NewFwdSecretRepo(database.Client.Database(config.Database.Dbname)),
-		RoutingEntry:  mongo_repo_impl.NewRoutingEntryRepo(database.Client.Database(config.Database.Dbname)),
-		Commitment:    mongo_repo_impl.NewCommitmentRepo(database.Client.Database(config.Database.Dbname)),
-		Channel:       mongo_repo_impl.NewChannelRepo(database.Client.Database(config.Database.Dbname)),
-		Message:       mongo_repo_impl.NewMessageRepo(database.Client.Database(config.Database.Dbname)),
-		Whitelist:     mongo_repo_impl.NewWhitelistRepo(database.Client.Database(config.Database.Dbname)),
-		Address:       mongo_repo_impl.NewAddressRepo(database.Client.Database(config.Database.Dbname)),
+		ExchangeHashcode: mongo_repo_impl.NewExchangeHashcodeRepo(database.Client.Database(config.Database.Dbname)),
+		FwdCommitment:    mongo_repo_impl.NewFwdCommitmentRepo(database.Client.Database(config.Database.Dbname)),
+		Invoice:          mongo_repo_impl.NewInvoiceRepo(database.Client.Database(config.Database.Dbname)),
+		FwdSecret:        mongo_repo_impl.NewFwdSecretRepo(database.Client.Database(config.Database.Dbname)),
+		RoutingEntry:     mongo_repo_impl.NewRoutingEntryRepo(database.Client.Database(config.Database.Dbname)),
+		Commitment:       mongo_repo_impl.NewCommitmentRepo(database.Client.Database(config.Database.Dbname)),
+		Channel:          mongo_repo_impl.NewChannelRepo(database.Client.Database(config.Database.Dbname)),
+		Message:          mongo_repo_impl.NewMessageRepo(database.Client.Database(config.Database.Dbname)),
+		Whitelist:        mongo_repo_impl.NewWhitelistRepo(database.Client.Database(config.Database.Dbname)),
+		Address:          mongo_repo_impl.NewAddressRepo(database.Client.Database(config.Database.Dbname)),
 	}
 
 	node := &LightningNode{

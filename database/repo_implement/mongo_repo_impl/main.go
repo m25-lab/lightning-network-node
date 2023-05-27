@@ -9,6 +9,7 @@ const (
 	SenderCommitment   string = "senderCommitments"
 	ReceiverCommitment string = "receiverCommitments"
 	FwdSecret          string = "fwdSecrets"
+	ExchangeHashcode   string = "exchangeHashcodes"
 	RoutingEntry       string = "routingEntries"
 	Invoice            string = "invoices"
 	FwdMessage         string = "fwdMessages"

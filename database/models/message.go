@@ -36,10 +36,11 @@ type OpenChannelData struct {
 }
 
 type ExchangeHashcodeData struct {
-	MySecret        string `json:"my_secret"`
-	MyHashcode      string `json:"my_hashcode"`
-	PartnerHashcode string `json:"partner_hashcode"`
-	PartnerSecret   string `json:"partner_secret,omitempty"`
+	MySecret        string `bson:"my_secret" json:"my_secret"`
+	MyHashcode      string `bson:"my_hashcode" json:"my_hashcode"`
+	PartnerHashcode string `bson:"partner_hashcode" json:"partner_hashcode"`
+	PartnerSecret   string `bson:"partner_secret,omitempty" json:"partner_secret,omitempty"`
+	ChannelID       string `bson:"channel_id,omitempty" json:"channel_id,omitempty"`
 }
 
 type Message struct {

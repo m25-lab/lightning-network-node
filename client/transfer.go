@@ -139,6 +139,11 @@ func (client *Client) LnTransfer(
 		if err != nil {
 			return err
 		}
+	} else {
+		_, err = client.ExchangeSecret(clientId, accountPacked, hashcodePayload)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

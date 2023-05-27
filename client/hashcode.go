@@ -66,11 +66,24 @@ func (client *Client) ExchangeHashcode(clientId string, accountPacked *AccountPa
 		return nil, err
 	}
 
-	payload, err = json.Marshal(models.ExchangeHashcodeData{
+	exHashcodeData := models.ExchangeHashcodeData{
 		MySecret:        secret,
 		MyHashcode:      hashCode,
 		PartnerHashcode: responsePayload.PartnerHashcode,
-	})
+	}
+
+	exHashcodeData1 := models.ExchangeHashcodeData{
+		MySecret:        secret,
+		MyHashcode:      hashCode,
+		PartnerHashcode: responsePayload.PartnerHashcode,
+		ChannelID:       savedMessage.ChannelID,
+	}
+	err = client.Node.Repository.ExchangeHashcode.InsertSecret(context.Background(), &exHashcodeData1)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err = json.Marshal(exHashcodeData)
 	if err != nil {
 		return nil, err
 	}

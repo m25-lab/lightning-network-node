@@ -62,6 +62,7 @@ func (client *Client) LnTransfer(
 
 	fromAmount := int64(0)
 	toAmount := amount
+	hashcodePayload := models.ExchangeHashcodeData{}
 
 	//check channel open
 	isOpenChannel := true
@@ -104,6 +105,21 @@ func (client *Client) LnTransfer(
 			return fmt.Errorf("not enough balance in channel")
 		}
 		toAmount = payload.CoinToCreator + amount
+
+		//get last exchangehashcode to reveal
+		latestHashCode, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+			context.Background(),
+			fromAccount.AccAddress().String(),
+			multisigAddr+":token:1",
+			models.ExchangeHashcode,
+		)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
+		if err != nil {
+			return err
+		}
 	}
 
 	//exchange hashcode

@@ -37,7 +37,7 @@ func main() {
 	checkErr(err)
 
 	go func() {
-		rpcServer.RunGateway()
+		rpcServer.RunGateway(config.LNode.External)
 		wg.Done()
 	}()
 

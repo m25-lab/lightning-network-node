@@ -39,6 +39,7 @@ type ExchangeHashcodeData struct {
 	MySecret        string `json:"my_secret"`
 	MyHashcode      string `json:"my_hashcode"`
 	PartnerHashcode string `json:"partner_hashcode"`
+	PartnerSecret   string `json:"partner_secret,omitempty"`
 }
 
 type Message struct {

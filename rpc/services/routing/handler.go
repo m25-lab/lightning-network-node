@@ -267,7 +267,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	//find invoice in db, exist => is Dest
 
 	needNext := false
-	invoice, err := server.Node.Repository.Invoice.FindByHash(ctx, req.HashcodeDest)
+	_, err = server.Node.Repository.Invoice.FindByHash(ctx, req.HashcodeDest)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			needNext = true

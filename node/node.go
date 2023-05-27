@@ -21,6 +21,7 @@ type Repository struct {
 	Message    repository.MessageRepo
 	Whitelist  repository.WhitelistRepo
 	Address    repository.AddressRepo
+	Routing    repository.RoutingRepo
 }
 
 func New(config *config.Config) (*LightningNode, error) {

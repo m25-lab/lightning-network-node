@@ -6,4 +6,5 @@ const (
 	Message    string = "messages"
 	Whitelist  string = "whitelists"
 	Address    string = "addresses"
+	Routing    string = "routing"
 )

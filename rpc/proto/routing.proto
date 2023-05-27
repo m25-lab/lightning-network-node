@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package channel;
+
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
+
+service RoutingService {
+  rpc RREQ(RREQRequest) returns (RoutingBaseResponse) {} // phase discovery
+  rpc RREP(RREPRequest) returns (RoutingBaseResponse) {} // phase reply
+  //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
+}
+
+message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
+
+message RREQRequest {
+  string SourceAddress = 1;
+  string DestinationAddress = 2;
+  string BroadcastID = 3; // hash invoice
+  string FromAddress = 4;
+}
+
+message RREPRequest {
+  string SourceAddress = 1;
+  string DestinationAddress = 2;
+  string BroadcastID = 3; // hash invoice
+  string FromAddress = 4;
+}
+
+enum RoutingErrorCode {
+  SOME_THING_WENT_WRONG = 0;
+  RREQ_EXISTED = 1;
+  RREP_EXISTED = 2;
+  MORE_THAN_ONE_RREQ_EXISTED = 3;
+  FORWARD_RREP_ERROR = 4;
+  OK = 999;
+}

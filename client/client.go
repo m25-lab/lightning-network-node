@@ -217,6 +217,10 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
+			//TODO: case for withdraw and broadcast
+			//TODO: new broadcast-only Model for fwdCommit
+			//
+
 			default:
 				msg.Text = "I don't know that command"
 			}

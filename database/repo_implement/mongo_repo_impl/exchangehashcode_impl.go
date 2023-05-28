@@ -41,6 +41,17 @@ func (mongo *ExchangeHashcodeRepoImplMongo) FindByPartnerHash(ctx context.Contex
 	return &result, nil
 }
 
+func (mongo *ExchangeHashcodeRepoImplMongo) UpdateSecret(ctx context.Context, input *models.ExchangeHashcodeData) error {
+	filter := bson.D{{"partner_hashcode", input.PartnerHashcode}}
+	update := bson.D{{"$set", bson.D{{"partner_secret", input.PartnerSecret}}}}
+	_, err := mongo.Db.Collection(ExchangeHashcode).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func NewExchangeHashcodeRepo(db *mongo.Database) repo.ExchangeHashcodeRepo {
 	return &ExchangeHashcodeRepoImplMongo{
 		Db: db,

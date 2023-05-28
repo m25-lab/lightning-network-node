@@ -9,4 +9,5 @@ type ExchangeHashcodeRepo interface {
 	InsertSecret(ctx context.Context, input *models.ExchangeHashcodeData) error
 	FindByOwnHash(ctx context.Context, hash string) (*models.ExchangeHashcodeData, error)
 	FindByPartnerHash(ctx context.Context, hash string) (*models.ExchangeHashcodeData, error)
+	UpdateSecret(ctx context.Context, input *models.ExchangeHashcodeData) error
 }

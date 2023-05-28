@@ -47,7 +47,7 @@ func (client *Client) ExchangeHashcode(clientId string, accountPacked *AccountPa
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(accountPacked.toEndpoint))
 	reponse, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId: ID.Hex(),
-		ChannelID: savedMessage.ChannelID,
+		ChannelId: savedMessage.ChannelID,
 		Action:    models.ExchangeHashcode,
 		Data:      string(payload),
 		From:      accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,

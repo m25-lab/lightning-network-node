@@ -16,6 +16,7 @@ type MongoDB struct {
 	ChannelCollection    *mongo.Collection
 	CommitmentCollection *mongo.Collection
 	MessageCollection    *mongo.Collection
+	RoutingCollection    *mongo.Collection
 }
 
 func Connect(ctx context.Context, configs *config.Database) (*MongoDB, error) {
@@ -41,10 +42,19 @@ func Connect(ctx context.Context, configs *config.Database) (*MongoDB, error) {
 	}
 	database.Collection("messages").Indexes().CreateOne(ctx, messageIndexModel)
 
+	routingIndexModel := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "routing_type", Value: 1},
+			{Key: "broadcast_id", Value: 1},
+		},
+	}
+	database.Collection("routing").Indexes().CreateOne(ctx, routingIndexModel)
+
 	return &MongoDB{
 		client,
 		database.Collection("channels"),
 		database.Collection("commitments"),
 		database.Collection("messages"),
+		database.Collection("routing"),
 	}, nil
 }

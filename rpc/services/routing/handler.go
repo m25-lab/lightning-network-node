@@ -34,10 +34,10 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	}
 
 	split := strings.Split(req.Dest, "@")
-	destAddr := split[0]
+	destAddr := split[0] // A
 	toEndpoint := split[1]
 
-	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr)
+	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr) //check coi A co trong db minh khong
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			go func() {
@@ -293,10 +293,9 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 
 		}()
 	} else {
-		//TODO: reveal secret with invoice from DB
+		//TODO: to phase reveal C's secret, call processInvoiceSecret to B
 	}
 
-	//TODO: Recheck mentioned phase because DB use FWDMessage
 	return &pb.FwdMessageResponse{
 		Response:   string(partnerCommitmentPayload),
 		PartnerSig: strSigReceiver,

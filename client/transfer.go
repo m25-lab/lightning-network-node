@@ -201,6 +201,7 @@ func (client *Client) LnTransferMulti(
 	fwdDest *string,
 	hashcodeDest *string,
 ) error {
+	//request invoice
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
 		return err
@@ -223,6 +224,7 @@ func (client *Client) LnTransferMulti(
 	//get next hop,trust routing
 	nextHop, err := client.Node.Repository.RoutingEntry.FindByDestAndHash(context.Background(), to, invoiceReponse.Hash)
 	nextHopSplit := strings.Split(nextHop.Next, "@")
+
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
 	if err != nil {
 		return err
@@ -287,7 +289,6 @@ func (client *Client) LnTransferMulti(
 	}
 	toAmount = payload.CoinToCreator
 
-	//TODO: xem lai store hashsecret to reveal
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {

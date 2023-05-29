@@ -96,7 +96,7 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(accountPacked.toEndpoint))
 	reponse, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId: messageId.Hex(),
-		ChannelID: savedMessage.ChannelID,
+		ChannelId: savedMessage.ChannelID,
 		Action:    models.ExchangeCommitment,
 		Data:      string(partnerCommitmentPayload),
 		From:      accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,

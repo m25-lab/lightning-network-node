@@ -61,7 +61,7 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
 		ID:         messageId,
 		OriginalID: messageId,
-		ChannelID:  req.ChannelID,
+		ChannelID:  req.ChannelId,
 		Action:     models.ExchangeCommitment,
 		Owner:      toAccount.AccAddress().String(),
 		Data:       req.Data,

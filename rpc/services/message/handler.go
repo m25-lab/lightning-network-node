@@ -2,6 +2,8 @@ package message
 
 import (
 	"context"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
+	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -53,7 +55,7 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		msg := &models.Message{
 			ID:              primitive.NewObjectID(),
 			OriginalID:      messageId,
-			ChannelID:       req.ChannelID,
+			ChannelID:       req.ChannelId,
 			Action:          req.Action,
 			Owner:           toAddress,
 			Data:            req.Data,
@@ -87,7 +89,7 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 		if req.Action == models.ExchangeHashcode {
 			return server.ValidateExchagneHashcode(ctx, req, fromAccount, toAccount)
 		} else if req.Action == models.ExchangeCommitment {
-			return server.ValidateExchangeCommitment(ctx, req, fromAccount, toAccount)
+			return server.ValidateExchangeCommitment(ctx, req, fromAccount, toAccount, existToAddress.ClientId, req.To)
 		} else if req.Action == models.OpenChannel {
 			return server.ValidateOpenChannel(ctx, req, fromAccount, toAccount)
 		}
@@ -96,5 +98,55 @@ func (server *MessageServer) SendMessage(ctx context.Context, req *pb.SendMessag
 	return &pb.SendMessageResponse{
 		Response:  "unknown",
 		ErrorCode: "1000",
+	}, nil
+}
+
+func (server *MessageServer) SendSecret(ctx context.Context, req *pb.SendSecretMessage) (*pb.SendSecretResponse, error) {
+	//rehash
+	if common.ToHashCode(req.MySecret) != req.MyHashcode {
+		return &pb.SendSecretResponse{
+			Secret:    "",
+			ErrorCode: "secret for" + req.MyHashcode + "not match",
+		}, nil
+	}
+
+	ownHashcode, err := server.Node.Repository.ExchangeHashcode.FindByOwnHash(ctx, req.PartnerHashcode)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return &pb.SendSecretResponse{
+				Secret:    "",
+				ErrorCode: "no record for hash",
+			}, nil
+		} else {
+			return &pb.SendSecretResponse{
+				Secret:    "",
+				ErrorCode: err.Error(),
+			}, nil
+		}
+	}
+
+	if ownHashcode.PartnerHashcode != req.MyHashcode {
+		return &pb.SendSecretResponse{
+			Secret:    "",
+			ErrorCode: "hashes mismatch",
+		}, nil
+	}
+
+	input := models.ExchangeHashcodeData{
+		MySecret:        ownHashcode.MySecret,
+		MyHashcode:      ownHashcode.MyHashcode,
+		PartnerHashcode: ownHashcode.PartnerHashcode,
+		PartnerSecret:   req.MySecret,
+		ChannelID:       ownHashcode.ChannelID,
+	}
+
+	err = server.Node.Repository.ExchangeHashcode.UpdateSecret(context.Background(), &input)
+	if err != nil {
+		println(err.Error(), "; cant update secret")
+	}
+
+	return &pb.SendSecretResponse{
+		Secret:    ownHashcode.MySecret,
+		ErrorCode: "",
 	}, nil
 }

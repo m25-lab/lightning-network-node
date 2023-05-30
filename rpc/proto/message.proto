@@ -5,20 +5,32 @@ package channel;
 option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 
 service MessageService {
-    rpc SendMessage (SendMessageRequest) returns (SendMessageResponse) {}
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+  rpc SendSecret(SendSecretMessage) returns (SendSecretResponse);
 }
 
 message SendMessageRequest {
-    string message_id = 1;
-    string channel_id = 2;
-    string action = 3;
-    string data = 4;
-    string from = 5;
-    string to = 6;
-    string relied_message_id = 7;
+  string message_id = 1;
+  string channel_id = 2;
+  string action = 3;
+  string data = 4;
+  string from = 5;
+  string to = 6;
+  string relied_message_id = 7;
 }
 
 message SendMessageResponse {
-    string response = 1;
-    string error_code = 2;
+  string response = 1;
+  string error_code = 2;
+}
+
+message SendSecretMessage {
+  string my_secret = 1;
+  string my_hashcode = 2;
+  string partner_hashcode = 3;
+}
+
+message SendSecretResponse {
+  string secret = 1;
+  string error_code = 2;
 }

@@ -47,7 +47,7 @@ func (client *Client) ExchangeHashcode(clientId string, accountPacked *AccountPa
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(accountPacked.toEndpoint))
 	reponse, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId: ID.Hex(),
-		ChannelID: savedMessage.ChannelID,
+		ChannelId: savedMessage.ChannelID,
 		Action:    models.ExchangeHashcode,
 		Data:      string(payload),
 		From:      accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
@@ -66,11 +66,24 @@ func (client *Client) ExchangeHashcode(clientId string, accountPacked *AccountPa
 		return nil, err
 	}
 
-	payload, err = json.Marshal(models.ExchangeHashcodeData{
+	exHashcodeData := models.ExchangeHashcodeData{
 		MySecret:        secret,
 		MyHashcode:      hashCode,
 		PartnerHashcode: responsePayload.PartnerHashcode,
-	})
+	}
+
+	exHashcodeData1 := models.ExchangeHashcodeData{
+		MySecret:        secret,
+		MyHashcode:      hashCode,
+		PartnerHashcode: responsePayload.PartnerHashcode,
+		ChannelID:       savedMessage.ChannelID,
+	}
+	err = client.Node.Repository.ExchangeHashcode.InsertSecret(context.Background(), &exHashcodeData1)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err = json.Marshal(exHashcodeData)
 	if err != nil {
 		return nil, err
 	}

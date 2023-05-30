@@ -1,0 +1,27 @@
+database:
+  host: "cluster0.gkboq8o.mongodb.net"
+  user: "admin"
+  password: "8dEEFgSldfSerTHO"
+  timeout: 10
+  dbname: "testing_mml"
+
+node:
+  chainId: "channel"
+  endpoint: "0.0.0.0:9090"
+  coinType: 60
+  prefixAddress: "cosmos"
+  tokenSymbol: "token"
+
+lNode:
+  external: "0.0.0.0:2525"
+
+telegram:
+  # botId: 6050008901:AAEktP3Fh7N6VIQt_J4WhRuJThhQCYj-hOI
+  botId: 6020944162:AAEzG6qFPMM3qpjsrUoQijcoiDxYOK8tALg
+
+kafka:
+  brokers:
+    - localhost:9092
+
+corechain:
+  endpoint: "http://0.0.0.0:26657"

@@ -69,3 +69,18 @@ func (mongo *RoutingRepoImplMongo) FindRouting(ctx context.Context, input models
 
 	return routings, nil
 }
+
+func (mongo *RoutingRepoImplMongo) FindByDestAndBroadcastId(ctx context.Context, owner, destinationAdrr, broadcastId string) (*models.Routing, error) {
+	nextHop := models.Routing{}
+
+	response := mongo.Db.Collection(Routing).FindOne(ctx, bson.M{
+		"owner":              owner,
+		"destination_adress": destinationAdrr,
+		"broadcast_id":       broadcastId,
+	})
+	if err := response.Decode(&nextHop); err != nil {
+		return nil, err
+	}
+
+	return &nextHop, nil
+}

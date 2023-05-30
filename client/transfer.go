@@ -3,9 +3,13 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
+
+	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
 	channeltypes "github.com/m25-lab/channel/x/channel/types"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -24,6 +28,8 @@ func (client *Client) LnTransfer(
 	clientId string,
 	to string,
 	amount int64,
+	fwdDest *string,
+	hashcodeDest *string,
 ) error {
 	//create account packed
 	fromAccount, err := client.CurrentAccount(clientId)
@@ -57,6 +63,7 @@ func (client *Client) LnTransfer(
 
 	fromAmount := int64(0)
 	toAmount := amount
+	hashcodePayload := models.ExchangeHashcodeData{}
 
 	//check channel open
 	isOpenChannel := true
@@ -99,6 +106,21 @@ func (client *Client) LnTransfer(
 			return fmt.Errorf("not enough balance in channel")
 		}
 		toAmount = payload.CoinToCreator + amount
+
+		//get last exchangehashcode to reveal
+		latestHashCode, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+			context.Background(),
+			fromAccount.AccAddress().String(),
+			multisigAddr+":token:1",
+			models.ExchangeHashcode,
+		)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
+		if err != nil {
+			return err
+		}
 	}
 
 	//exchange hashcode
@@ -107,7 +129,7 @@ func (client *Client) LnTransfer(
 		return err
 	}
 
-	_, err = client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount)
+	_, err = client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount, fwdDest, hashcodeDest)
 	if err != nil {
 		return err
 	}
@@ -115,6 +137,11 @@ func (client *Client) LnTransfer(
 	//open channel
 	if !isOpenChannel {
 		err = client.OpenChannel(clientId, accountPacked)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = client.ExchangeSecret(clientId, accountPacked, hashcodePayload)
 		if err != nil {
 			return err
 		}
@@ -164,6 +191,116 @@ func (client *Client) Transfer(clientId string, toAddress string, value int64) e
 		return err
 	}
 	fmt.Printf("Transfer: %s\n", broadcastResponse.String())
+
+	return nil
+}
+
+func (client *Client) LnTransferMulti(
+	clientId string,
+	to string,
+	amount int64,
+	fwdDest *string,
+	hashcodeDest *string,
+) error {
+	//request invoice
+	fromAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return err
+	}
+	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(to))
+	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
+	invoiceReponse, err := rpcClient.RequestInvoice(context.Background(), &pb.IREQMessage{
+		Amount: amount,
+		From:   selfAddress,
+	})
+
+	if err != nil {
+		return err
+	}
+	if invoiceReponse.ErrorCode != "" {
+		return errors.New(invoiceReponse.ErrorCode)
+	}
+
+	//TODO: Implement Routing with to and hash
+
+	//get next hop,trust routing
+	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceReponse.Hash)
+	nextHopSplit := strings.Split(nextHop.NextHop, "@")
+
+	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
+	if err != nil {
+		return err
+	}
+
+	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
+	toEndpoint := nextHopSplit[1]
+
+	//??
+	accountPacked := &AccountPacked{
+		fromAccount: fromAccount,
+		toAccount:   toAccount,
+		toEndpoint:  toEndpoint,
+	}
+
+	//check multisigAddr active
+	multisigAddr, _, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
+	multisigAddrBalance, err := client.Balance(multisigAddr)
+	if err != nil {
+		return err
+	}
+	if multisigAddrBalance < amount {
+		//err = client.Transfer(clientId, multisigAddr, 1)
+		if err != nil {
+			return errors.New("Multisig not enough balance:" + strconv.FormatInt(multisigAddrBalance, 10))
+		}
+	}
+
+	fromAmount := int64(0)
+	toAmount := amount
+
+	//check channel open
+	_, err = client.l1Client.channel.Channel(
+		context.Background(),
+		&channeltypes.QueryGetChannelRequest{
+			Index: multisigAddr + ":token:1",
+		},
+	)
+	if err != nil && err.Error() == "rpc error: code = NotFound desc = not found" {
+		return errors.New("missing chanel with: " + nextHop.NextHop)
+	}
+
+	lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		fromAccount.AccAddress().String(),
+		multisigAddr+":token:1",
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		return err
+	}
+
+	payload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
+	if err != nil {
+		return err
+	}
+
+	fromAmount = payload.CoinToHtlc - amount
+	if fromAmount < 0 {
+		return fmt.Errorf("not enough balance in channel")
+	}
+	toAmount = payload.CoinToCreator
+
+	//exchange hashcode
+	_, err = client.ExchangeHashcode(clientId, accountPacked)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, fwdDest, hashcodeDest)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

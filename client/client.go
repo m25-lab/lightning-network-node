@@ -199,12 +199,28 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				}
-				err = client.LnTransfer(clientId, params[0], amount)
+				err = client.LnTransfer(clientId, params[0], amount, nil, nil)
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
+			case "ln_transfer_multi":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				amount, err := strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				err = client.LnTransferMulti(clientId, params[0], amount, nil, nil)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
+				}
+			//TODO: case for withdraw and broadcast
+			//TODO: new broadcast-only Model for fwdCommit
+			//
+
 			default:
 				msg.Text = "I don't know that command"
 			}
@@ -231,9 +247,10 @@ func (client *Client) TelegramMsg(_clientId string, msg *models.Message, fromAcc
 		return err
 	}
 
-	if msg.Action == models.AddWhitelist {
+	switch msg.Action {
+	case models.AddWhitelist:
 		return client.ResolveAddWhitelist(clientId, msg)
-	} else if msg.Action == models.AcceptAddWhitelist {
+	case models.AcceptAddWhitelist:
 		return client.ResolveAcceptAddWhitelist(clientId, msg)
 	}
 

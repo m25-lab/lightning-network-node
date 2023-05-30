@@ -36,6 +36,7 @@ func New(config *config.Config) (*LightningNode, error) {
 		Message:    mongo_repo_impl.NewMessageRepo(database.Client.Database(config.Database.Dbname)),
 		Whitelist:  mongo_repo_impl.NewWhitelistRepo(database.Client.Database(config.Database.Dbname)),
 		Address:    mongo_repo_impl.NewAddressRepo(database.Client.Database(config.Database.Dbname)),
+		Routing:    mongo_repo_impl.NewRoutingRepo(database.Client.Database(config.Database.Dbname)),
 	}
 
 	node := &LightningNode{

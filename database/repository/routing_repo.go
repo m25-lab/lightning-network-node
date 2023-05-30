@@ -8,5 +8,5 @@ import (
 
 type RoutingRepo interface {
 	InsertOne(context.Context, *models.Routing) error
-	FindRoutingByBroadcastIDAndType(context.Context, string, string) ([]*models.Routing, error)
+	FindRouting(context.Context, models.Routing) ([]*models.Routing, error)
 }

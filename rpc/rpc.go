@@ -3,8 +3,10 @@ package rpc
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/m25-lab/lightning-network-node/client"
+	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/services/node_info"
 	"github.com/m25-lab/lightning-network-node/rpc/services/routing"
@@ -66,12 +68,12 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 }
 
 func (gateway *RPCServer) RunGateway() error {
-	listener, err := net.Listen("tcp", "0.0.0.0:2525")
+	listener, err := net.Listen("tcp", config.GlobalConfig.LNode.External)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Server is running in port 2525")
+	fmt.Println("Server is running in port ", strings.Split(config.GlobalConfig.LNode.External, ":")[1])
 
 	err = gateway.grpcServer.Serve(listener)
 	if err != nil {

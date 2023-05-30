@@ -7,6 +7,7 @@ import (
 )
 
 var configs *Config
+var GlobalConfig *Config
 
 func LoadConfig() (*Config, error) {
 	if configs != nil {
@@ -33,5 +34,6 @@ func LoadConfig() (*Config, error) {
 		return configs, err
 	}
 
+	GlobalConfig = configs
 	return configs, nil
 }

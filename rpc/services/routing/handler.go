@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,9 +17,26 @@ type RoutingGrpcHandler struct {
 }
 
 func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb.RoutingBaseResponse, error) {
+	if req == nil {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
+		}, fmt.Errorf("Nil body")
+	}
+
+	if !server.CheckSelfIsTargetNode(ctx, req.ToAddress) {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_WRONG_NODE,
+		}, fmt.Errorf("Wrong node")
+	}
+
 	// Try get by broadcast id
-	routings, err := server.Node.Repository.Routing.FindRoutingByBroadcastIDAndType(ctx, req.BroadcastID, models.RoutingTypeDiscovery)
-	if err != nil {
+	routings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
+		Type:        models.RoutingTypeDiscovery,
+		BroadcastID: req.BroadcastID,
+		//NextHop:     req.FromAddress,
+		Owner: req.ToAddress,
+	})
+	if err != nil && err.Error() != "NOT_FOUND" {
 		return &pb.RoutingBaseResponse{}, err
 	}
 
@@ -29,50 +47,62 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		}, fmt.Errorf("RREQ existed")
 	}
 
-	// If not check is destination is selfEndpoint
-	if server.CheckIsDestination(ctx, req.DestinationAddress) {
-		// If yes --> return OK and go to RREP in background
-		go server.StartRREP(req.DestinationAddress, &pb.RREPRequest{
-			SourceAddress:      req.DestinationAddress,
-			DestinationAddress: req.SourceAddress,
-			BroadcastID:        req.BroadcastID,
-			FromAddress:        req.DestinationAddress,
-		})
-		return &pb.RoutingBaseResponse{
-			ErrorCode: pb.RoutingErrorCode_OK,
-		}, nil
-	}
-
-	// If not --> save record
 	err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
 		ID:                 primitive.NewObjectID(),
 		Type:               models.RoutingTypeDiscovery,
 		BroadcastID:        req.BroadcastID,
 		DestinationAddress: req.SourceAddress,
-		NextHop:            req.FromAddress,
+		NextHop:            req.SourceAddress,
+		Owner:              req.ToAddress,
 	})
 	if err != nil {
 		return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
 	}
 
-	// Build RREP message
-	forwardRREQRequest := *req
-	forwardRREQRequest.FromAddress = req.DestinationAddress
+	// If not check is destination is selfEndpoint
+	if server.CheckIsDestination(ctx, req.DestinationAddress) {
+		// If yes --> return OK and go to RREP in background
+		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
+			ID:                 primitive.NewObjectID(),
+			Type:               models.RoutingTypeReply,
+			BroadcastID:        req.BroadcastID,
+			DestinationAddress: req.DestinationAddress,
+			NextHop:            req.ToAddress,
+			Owner:              req.ToAddress,
+		})
+		if err != nil {
+			return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert first RREQ error")
+		}
+		go server.StartRREP(req.FromAddress, pb.RREPRequest{
+			BroadcastID:        req.BroadcastID,
+			ToAddress:          req.FromAddress,
+			FromAddress:        req.ToAddress,
+			DestinationAddress: req.SourceAddress,
+			SourceAddress:      req.DestinationAddress,
+		})
+	} else {
+		// If not --> Forward RREQ
+		// Build RREP message
+		forwardRREQRequest := *req
+		forwardRREQRequest.FromAddress = req.ToAddress
 
-	// Broadcast to all channel opened in background
-	neighborNodes, err := server.GetNeighborNodes(req.DestinationAddress)
-	if err != nil {
-		return &pb.RoutingBaseResponse{}, fmt.Errorf("Get neighbor nodes error")
-	}
+		// Broadcast to all channel opened in background
+		neighborNodes, err := server.GetNeighborNodes(forwardRREQRequest.FromAddress)
+		if err != nil {
+			return &pb.RoutingBaseResponse{}, fmt.Errorf("Get neighbor nodes error")
+		}
 
-	if len(neighborNodes) == 0 {
-		return &pb.RoutingBaseResponse{
-			ErrorCode: pb.RoutingErrorCode_NOT_FOUND_NEIGHBOR_NODE,
-		}, fmt.Errorf("Not found any neighbor nodes")
-	}
+		if len(neighborNodes) == 0 {
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_NOT_FOUND_NEIGHBOR_NODE,
+			}, fmt.Errorf("Not found any neighbor nodes")
+		}
 
-	for _, neighborNode := range neighborNodes {
-		go server.ForwardRREQ(neighborNode, forwardRREQRequest)
+		// fmt.Println("neighborNodes ", neighborNodes)
+		for _, neighborNode := range neighborNodes {
+			forwardRREQRequest.ToAddress = neighborNode
+			go server.ForwardRREQ(neighborNode, forwardRREQRequest)
+		}
 	}
 
 	return &pb.RoutingBaseResponse{
@@ -81,39 +111,78 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 }
 
 func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb.RoutingBaseResponse, error) {
+	if req == nil {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
+		}, fmt.Errorf("Nil body")
+	}
+
+	if !server.CheckSelfIsTargetNode(ctx, req.ToAddress) {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_WRONG_NODE,
+		}, fmt.Errorf("Wrong node")
+	}
+
 	// Try get by broadcast id
-	routings, err := server.Node.Repository.Routing.FindRoutingByBroadcastIDAndType(ctx, req.BroadcastID, models.RoutingTypeDiscovery)
-	if err != nil {
+	repRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
+		BroadcastID:        req.BroadcastID,
+		Type:               models.RoutingTypeReply,
+		DestinationAddress: req.SourceAddress,
+		Owner:              req.ToAddress,
+	})
+	if err != nil && err.Error() != "NOT_FOUND" {
 		return &pb.RoutingBaseResponse{}, err
 	}
 
-	if len(routings) > 0 {
+	if len(repRoutings) > 0 {
 		return &pb.RoutingBaseResponse{
-			ErrorCode: pb.RoutingErrorCode_MORE_THAN_ONE_RREQ_EXISTED,
-		}, fmt.Errorf("Have more than one RREQ existed")
+			ErrorCode: pb.RoutingErrorCode_RREP_EXISTED,
+		}, fmt.Errorf("RREP existed")
+	}
+
+	// save record
+	err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
+		ID:                 primitive.NewObjectID(),
+		Type:               models.RoutingTypeReply,
+		BroadcastID:        req.BroadcastID,
+		DestinationAddress: req.SourceAddress,
+		NextHop:            req.FromAddress,
+		Owner:              req.ToAddress,
+	})
+	if err != nil {
+		return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
 	}
 
 	// If have check is source location is selfEndpoint
 	if server.CheckIsDestination(ctx, req.DestinationAddress) {
-		// If yes save record then get telegram client id --> push a message
-		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
-			ID:                 primitive.NewObjectID(),
-			Type:               models.RoutingTypeReply,
-			BroadcastID:        req.BroadcastID,
-			DestinationAddress: req.DestinationAddress,
-			NextHop:            req.FromAddress,
-		})
-		if err != nil {
-			return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
+		// If yes get telegram client id --> push a message
+		address, err := server.Node.Repository.Address.FindByAddress(ctx, getWalletAddress(req.DestinationAddress))
+		if err == nil {
+			clientId, err := strconv.ParseInt(address.ClientId, 10, 64)
+			if err == nil {
+				msg := tgbotapi.NewMessage(clientId, "")
+				msg.ParseMode = "Markdown"
+				msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully.*\n", req.BroadcastID)
+				_, _ = server.Client.Bot.Send(msg)
+			}
 		}
-		msg := buildMessageFindRoutingSuccess(req.BroadcastID)
-		_, _ = server.Client.Bot.Send(msg)
 	} else {
-		routing := routings[0]
+		reqRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
+			BroadcastID:        req.BroadcastID,
+			Type:               models.RoutingTypeDiscovery,
+			DestinationAddress: req.DestinationAddress,
+			Owner:              req.ToAddress,
+		})
+		if err != nil && err.Error() != "NOT_FOUND" {
+			return &pb.RoutingBaseResponse{}, err
+		}
+
+		reqRouting := reqRoutings[0]
 		// If not return ok then build next RREPRequest then return OK and RREP next node in background
 		forwardRREPRequest := *req
-		forwardRREPRequest.FromAddress = req.DestinationAddress
-		go server.ForwardRREP(routing.NextHop, forwardRREPRequest)
+		forwardRREPRequest.FromAddress = req.ToAddress
+		forwardRREPRequest.ToAddress = reqRouting.NextHop
+		go server.ForwardRREP(reqRouting.NextHop, forwardRREPRequest)
 	}
 
 	return &pb.RoutingBaseResponse{
@@ -121,8 +190,8 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 	}, nil
 }
 
-func (server *RoutingServer) CheckIsDestination(ctx context.Context, destinationAddress string) bool {
-	walletAddress, endpoint := extractAdress(destinationAddress)
+func (server *RoutingServer) CheckSelfIsTargetNode(ctx context.Context, targetAdress string) bool {
+	walletAddress, endpoint := extractAdress(targetAdress)
 	// check is node have this wallet address
 	_, err := server.Node.Repository.Address.FindByAddress(ctx, walletAddress)
 	if err != nil {
@@ -131,11 +200,8 @@ func (server *RoutingServer) CheckIsDestination(ctx context.Context, destination
 	return endpoint == server.GetSelfEndpoint()
 }
 
-func buildMessageFindRoutingSuccess(broadcastID string) *tgbotapi.MessageConfig {
-	msg := new(tgbotapi.MessageConfig)
-	msg.Text = fmt.Sprintf("✅ *Find route for %s successfully.", broadcastID)
-	msg.ParseMode = "Markdown"
-	return msg
+func (server *RoutingServer) CheckIsDestination(ctx context.Context, destinationAddress string) bool {
+	return server.CheckSelfIsTargetNode(ctx, destinationAddress)
 }
 
 func getEndpoint(address string) string {
@@ -173,17 +239,19 @@ func (server *RoutingServer) GetNeighborNodes(address string) ([]string, error) 
 	// find endpoint of address
 	res := []string{}
 	for _, wl := range neighborAdress {
-		res = append(res, getEndpoint(wl.PartnerAddress))
+		res = append(res, wl.PartnerAddress)
 	}
 
 	return res, nil
 }
 
-func (server *RoutingServer) StartRREP(toAddress string, req *pb.RREPRequest) error {
+func (server *RoutingServer) StartRREP(toAddress string, req pb.RREPRequest) error {
 	rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(getEndpoint(toAddress)))
-	response, err := rpcClient.RREP(context.Background(), req)
+	// time..Sleep(1 * time.Second)
+	response, err := rpcClient.RREP(context.Background(), &req)
 	if err != nil {
-		log.Println(err.Error() + "-" + response.ErrorCode.String())
+		log.Panicln("Resp: ", response)
+		log.Println(err.Error())
 		return err
 	}
 	return nil
@@ -191,9 +259,11 @@ func (server *RoutingServer) StartRREP(toAddress string, req *pb.RREPRequest) er
 
 func (server *RoutingServer) ForwardRREQ(toAddress string, req pb.RREQRequest) error {
 	rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(getEndpoint(toAddress)))
+	// time.Sleep(1 * time.Second)
 	response, err := rpcClient.RREQ(context.Background(), &req)
 	if err != nil {
-		log.Println(err.Error() + "-" + response.ErrorCode.String())
+		log.Println("Resp: ", response)
+		log.Println(err.Error())
 		return err
 	}
 	return nil
@@ -201,9 +271,11 @@ func (server *RoutingServer) ForwardRREQ(toAddress string, req pb.RREQRequest) e
 
 func (server *RoutingServer) ForwardRREP(toAddress string, req pb.RREPRequest) error {
 	rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(getEndpoint(toAddress)))
+	// time.Sleep(1 * time.Second)
 	response, err := rpcClient.RREP(context.Background(), &req)
 	if err != nil {
-		log.Println(err.Error() + "-" + response.ErrorCode.String())
+		log.Println("Resp: ", response)
+		log.Println(err.Error())
 		return err
 	}
 	return nil

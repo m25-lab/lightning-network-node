@@ -12,6 +12,7 @@ import (
 )
 
 func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized, clientId string, ownAddr string) (*pb.SendMessageResponse, error) {
+	selfAddress := toAccount.AccAddress().String() + "@" + server.Node.Config.LNode.External
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
 
 	var myCommitmentPayload models.CreateCommitmentData
@@ -120,9 +121,9 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		if myCommitmentPayload.FwdDest != ownAddr {
 			go func() {
 				//find next
-				nextHop, err := server.Client.Node.Repository.RoutingEntry.FindByDestAndHash(ctx, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
+				nextHop, err := server.Client.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, selfAddress, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
 				if err != nil {
-					println("Fwd Commitment: nextHop-FindByDestAndHash:", err.Error())
+					println("Fwd Commitment: nextHop-FindByDestAndBroadcastId:", err.Error())
 					return
 				}
 				//find receivercommit
@@ -137,7 +138,7 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 					println("Fwd Commitment: nextHop-Unmarshal:", err.Error())
 					return
 				}
-				server.Client.LnTransfer(clientId, nextHop.Next, rCData.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
+				server.Client.LnTransfer(clientId, nextHop.NextHop, rCData.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
 			}()
 		}
 	}

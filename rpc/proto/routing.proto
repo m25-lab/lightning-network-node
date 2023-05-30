@@ -10,10 +10,8 @@ service RoutingService {
   //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
 
   rpc RequestInvoice(IREQMessage) returns (IREPMessage);
-  rpc ProcessRREQ(RREQMessage) returns (RoutingResponse);
-  rpc ProcessRREP(RREPMessage) returns (RoutingResponse);
   rpc ProcessFwdMessage(FwdMessage) returns (FwdMessageResponse);
-  rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingResponse);
+  rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingBaseResponse);
 }
 
 message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
@@ -43,6 +41,9 @@ enum RoutingErrorCode {
   NOT_FOUND_NEIGHBOR_NODE = 5;
   PARAM_INVALID = 6;
   WRONG_NODE = 7;
+  VALIDATE_INVOICE_SECRET = 8;
+  INSERT_SECRET = 9;
+  DESTINATION_ADDRESS_FIND_BY_ADDRESS = 10;
   OK = 999;
 }
 
@@ -66,25 +67,6 @@ message InvoiceSecretMessage {
   string hashcode = 1;
   string secret = 2;
   string dest = 3;
-}
-
-message RREQMessage {
-  string origin = 1;
-  string destination = 2;
-  int32 sequence = 3;
-  int32 hops = 4;
-}
-
-message RREPMessage {
-  string origin = 1;
-  string destination = 2;
-  int32 sequence = 3;
-  int32 hops = 4;
-}
-
-message RoutingResponse {
-  string response = 1;
-  string error_code = 2;
 }
 
 message FwdMessageResponse {

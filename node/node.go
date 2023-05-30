@@ -23,7 +23,6 @@ type Repository struct {
 	Address          repository.AddressRepo
 	Routing          repository.RoutingRepo
 	FwdSecret        repository.FwdSecretRepo
-	RoutingEntry     repository.RoutingEntry
 	Invoice          repository.InvoiceRepo
 	ExchangeHashcode repository.ExchangeHashcodeRepo
 	FwdCommitment    repository.FwdCommitmentRepo
@@ -46,7 +45,6 @@ func New(config *config.Config) (*LightningNode, error) {
 		FwdCommitment:    mongo_repo_impl.NewFwdCommitmentRepo(database.Client.Database(config.Database.Dbname)),
 		Invoice:          mongo_repo_impl.NewInvoiceRepo(database.Client.Database(config.Database.Dbname)),
 		FwdSecret:        mongo_repo_impl.NewFwdSecretRepo(database.Client.Database(config.Database.Dbname)),
-		RoutingEntry:     mongo_repo_impl.NewRoutingEntryRepo(database.Client.Database(config.Database.Dbname)),
 	}
 
 	node := &LightningNode{

@@ -286,14 +286,13 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req pb.RREPRequest) e
 	return nil
 }
 
-func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingResponse, error) {
+func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingBaseResponse, error) {
 	//check hash
 	receiverCommit, err := server.ValidateInvoiceSecret(ctx, req)
 	if err != nil {
-		return &pb.RoutingResponse{
-			Response:  err.Error(),
-			ErrorCode: "ValidateInvoiceSecret",
-		}, nil
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_VALIDATE_INVOICE_SECRET,
+		}, fmt.Errorf("Validate invoice secret error")
 	}
 	//luu DB
 	data := models.FwdSecret{
@@ -301,10 +300,9 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		Secret:       req.Secret,
 	}
 	if err := server.Node.Repository.FwdSecret.InsertSecret(ctx, &data); err != nil {
-		return &pb.RoutingResponse{
-			Response:  err.Error(),
-			ErrorCode: "InsertSecret",
-		}, nil
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_INSERT_SECRET,
+		}, fmt.Errorf("Insert secret error")
 	}
 
 	split := strings.Split(req.Dest, "@")
@@ -315,48 +313,50 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			go func() {
-				nextEntry, err := server.Node.Repository.RoutingEntry.FindByDestAndHash(ctx, req.Dest, req.Hashcode)
+				nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, destAddr, req.Dest, req.Hashcode)
 				if err != nil {
-					println("nextEntry_FindByDestAndHash", err.Error())
+					println("nextEntry_FindByDestAndBroadcastId", err.Error())
 				}
 				rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(toEndpoint))
 				_, err = rpcClient.ProcessInvoiceSecret(ctx, &pb.InvoiceSecretMessage{
 					Hashcode: req.Hashcode,
 					Secret:   req.Secret,
-					Dest:     nextEntry.Dest,
+					Dest:     nextEntry.DestinationAddress,
 				})
 				if err != nil {
 					println("ProcessInvoiceSecret", err.Error())
 				}
 			}()
-			return &pb.RoutingResponse{
-				Response:  "success",
-				ErrorCode: "",
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_OK,
 			}, nil
 		} else {
-			return &pb.RoutingResponse{
-				Response:  err.Error(),
-				ErrorCode: "destAddr_FindByAddress",
-			}, nil
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_DESTINATION_ADDRESS_FIND_BY_ADDRESS,
+			}, fmt.Errorf("Find destination address by address error")
 		}
 	}
 	// is dest -> phase commitment
 	go func() {
 		amount := receiverCommit.CoinTransfer
-		dest, err := server.Node.Repository.RoutingEntry.FindDestByHash(ctx, req.Hashcode)
+		nexthops, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
+			BroadcastID: req.Hashcode,
+			Type:        models.RoutingTypeReply,
+		})
 		if err != nil {
-			println("FindDestByHash", err.Error())
+			println("FindRouting", err.Error())
 			return
 		}
-		err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, dest, &receiverCommit.HashcodeDest)
+		dest := nexthops[0].NextHop
+
+		err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &dest, &receiverCommit.HashcodeDest)
 		if err != nil {
 			println("Trade commitment - LnTransfer:", err.Error())
 		}
 	}()
 
-	return &pb.RoutingResponse{
-		Response:  "success",
-		ErrorCode: "",
+	return &pb.RoutingBaseResponse{
+		ErrorCode: pb.RoutingErrorCode_OK,
 	}, nil
 }
 
@@ -555,12 +555,12 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	if needNext {
 		//find next hop and reuse
 		go func() {
-			nextHop, err := server.Node.Repository.RoutingEntry.FindByDestAndHash(ctx, req.Dest, req.HashcodeDest)
+			nextHop, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, toAddress, req.Dest, req.HashcodeDest)
 			if err != nil {
 				println("Missing routing entry for:", req.Dest)
 				return
 			}
-			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.Next, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest)
+			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.NextHop, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest)
 			if err != nil {
 				println("Trade fwd commitment - LnTransferMulti:", err.Error())
 			}

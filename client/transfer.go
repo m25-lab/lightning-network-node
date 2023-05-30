@@ -208,9 +208,10 @@ func (client *Client) LnTransferMulti(
 		return err
 	}
 	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(to))
+	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
 	invoiceReponse, err := rpcClient.RequestInvoice(context.Background(), &pb.IREQMessage{
 		Amount: amount,
-		From:   fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
+		From:   selfAddress,
 	})
 
 	if err != nil {
@@ -223,8 +224,8 @@ func (client *Client) LnTransferMulti(
 	//TODO: Implement Routing with to and hash
 
 	//get next hop,trust routing
-	nextHop, err := client.Node.Repository.RoutingEntry.FindByDestAndHash(context.Background(), to, invoiceReponse.Hash)
-	nextHopSplit := strings.Split(nextHop.Next, "@")
+	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceReponse.Hash)
+	nextHopSplit := strings.Split(nextHop.NextHop, "@")
 
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
 	if err != nil {
@@ -265,7 +266,7 @@ func (client *Client) LnTransferMulti(
 		},
 	)
 	if err != nil && err.Error() == "rpc error: code = NotFound desc = not found" {
-		return errors.New("missing chanel with: " + nextHop.Next)
+		return errors.New("missing chanel with: " + nextHop.NextHop)
 	}
 
 	lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(

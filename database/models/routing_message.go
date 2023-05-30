@@ -5,26 +5,6 @@ const (
 	ReceiverCommit string = "receiver_commitment"
 )
 
-type RREQMessage struct {
-	Origin      string `bson:"origin"`
-	Destination string `bson:"destination"`
-	Sequence    int    `bson:"sequence"`
-	Hops        int    `bson:"hops"`
-}
-
-type RREPMessage struct {
-	Origin      string `bson:"origin"`
-	Destination string `bson:"destination"`
-	Sequence    int    `bson:"sequence"`
-	Hops        int    `bson:"hops"`
-}
-
-type RoutingEntry struct {
-	Dest         string `bson:"dest" json:"dest"`
-	HashcodeDest string `bson:"hashcode_dest" json:"hashcode_dest"`
-	Next         string `bson:"next" json:"next"`
-}
-
 // To Save in Db of Dest
 type InvoiceData struct {
 	Amount int64  `json:"amount" bson:"amount"`

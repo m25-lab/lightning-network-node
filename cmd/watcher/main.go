@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 
 	"github.com/m25-lab/lightning-network-node/config"
 	"github.com/m25-lab/lightning-network-node/watcher"
@@ -13,7 +14,10 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	config, err := config.LoadConfig()
+	configType := flag.String("config", "", "Configuration option")
+	flag.Parse()
+
+	config, err := config.LoadConfig(configType)
 	if err != nil {
 		log.Panic(err)
 	}

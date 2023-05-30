@@ -24,6 +24,11 @@ const _ = grpc.SupportPackageIsVersion7
 type RoutingServiceClient interface {
 	RREQ(ctx context.Context, in *RREQRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
 	RREP(ctx context.Context, in *RREPRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
+	RequestInvoice(ctx context.Context, in *IREQMessage, opts ...grpc.CallOption) (*IREPMessage, error)
+	ProcessRREQ(ctx context.Context, in *RREQMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
+	ProcessRREP(ctx context.Context, in *RREPMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
+	ProcessFwdMessage(ctx context.Context, in *FwdMessage, opts ...grpc.CallOption) (*FwdMessageResponse, error)
+	ProcessInvoiceSecret(ctx context.Context, in *InvoiceSecretMessage, opts ...grpc.CallOption) (*RoutingResponse, error)
 }
 
 type routingServiceClient struct {
@@ -52,12 +57,62 @@ func (c *routingServiceClient) RREP(ctx context.Context, in *RREPRequest, opts .
 	return out, nil
 }
 
+func (c *routingServiceClient) RequestInvoice(ctx context.Context, in *IREQMessage, opts ...grpc.CallOption) (*IREPMessage, error) {
+	out := new(IREPMessage)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/RequestInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *routingServiceClient) ProcessRREQ(ctx context.Context, in *RREQMessage, opts ...grpc.CallOption) (*RoutingResponse, error) {
+	out := new(RoutingResponse)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/ProcessRREQ", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *routingServiceClient) ProcessRREP(ctx context.Context, in *RREPMessage, opts ...grpc.CallOption) (*RoutingResponse, error) {
+	out := new(RoutingResponse)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/ProcessRREP", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *routingServiceClient) ProcessFwdMessage(ctx context.Context, in *FwdMessage, opts ...grpc.CallOption) (*FwdMessageResponse, error) {
+	out := new(FwdMessageResponse)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/ProcessFwdMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *routingServiceClient) ProcessInvoiceSecret(ctx context.Context, in *InvoiceSecretMessage, opts ...grpc.CallOption) (*RoutingResponse, error) {
+	out := new(RoutingResponse)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/ProcessInvoiceSecret", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RoutingServiceServer is the server API for RoutingService service.
 // All implementations must embed UnimplementedRoutingServiceServer
 // for forward compatibility
 type RoutingServiceServer interface {
 	RREQ(context.Context, *RREQRequest) (*RoutingBaseResponse, error)
 	RREP(context.Context, *RREPRequest) (*RoutingBaseResponse, error)
+	RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error)
+	ProcessRREQ(context.Context, *RREQMessage) (*RoutingResponse, error)
+	ProcessRREP(context.Context, *RREPMessage) (*RoutingResponse, error)
+	ProcessFwdMessage(context.Context, *FwdMessage) (*FwdMessageResponse, error)
+	ProcessInvoiceSecret(context.Context, *InvoiceSecretMessage) (*RoutingResponse, error)
 	mustEmbedUnimplementedRoutingServiceServer()
 }
 
@@ -70,6 +125,21 @@ func (UnimplementedRoutingServiceServer) RREQ(context.Context, *RREQRequest) (*R
 }
 func (UnimplementedRoutingServiceServer) RREP(context.Context, *RREPRequest) (*RoutingBaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RREP not implemented")
+}
+func (UnimplementedRoutingServiceServer) RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
+}
+func (UnimplementedRoutingServiceServer) ProcessRREQ(context.Context, *RREQMessage) (*RoutingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessRREQ not implemented")
+}
+func (UnimplementedRoutingServiceServer) ProcessRREP(context.Context, *RREPMessage) (*RoutingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessRREP not implemented")
+}
+func (UnimplementedRoutingServiceServer) ProcessFwdMessage(context.Context, *FwdMessage) (*FwdMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessFwdMessage not implemented")
+}
+func (UnimplementedRoutingServiceServer) ProcessInvoiceSecret(context.Context, *InvoiceSecretMessage) (*RoutingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessInvoiceSecret not implemented")
 }
 func (UnimplementedRoutingServiceServer) mustEmbedUnimplementedRoutingServiceServer() {}
 
@@ -120,6 +190,96 @@ func _RoutingService_RREP_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RoutingService_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IREQMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).RequestInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/RequestInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).RequestInvoice(ctx, req.(*IREQMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoutingService_ProcessRREQ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RREQMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).ProcessRREQ(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/ProcessRREQ",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).ProcessRREQ(ctx, req.(*RREQMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoutingService_ProcessRREP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RREPMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).ProcessRREP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/ProcessRREP",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).ProcessRREP(ctx, req.(*RREPMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoutingService_ProcessFwdMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FwdMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).ProcessFwdMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/ProcessFwdMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).ProcessFwdMessage(ctx, req.(*FwdMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoutingService_ProcessInvoiceSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvoiceSecretMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).ProcessInvoiceSecret(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/ProcessInvoiceSecret",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).ProcessInvoiceSecret(ctx, req.(*InvoiceSecretMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RoutingService_ServiceDesc is the grpc.ServiceDesc for RoutingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +294,26 @@ var RoutingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RREP",
 			Handler:    _RoutingService_RREP_Handler,
+		},
+		{
+			MethodName: "RequestInvoice",
+			Handler:    _RoutingService_RequestInvoice_Handler,
+		},
+		{
+			MethodName: "ProcessRREQ",
+			Handler:    _RoutingService_ProcessRREQ_Handler,
+		},
+		{
+			MethodName: "ProcessRREP",
+			Handler:    _RoutingService_ProcessRREP_Handler,
+		},
+		{
+			MethodName: "ProcessFwdMessage",
+			Handler:    _RoutingService_ProcessFwdMessage_Handler,
+		},
+		{
+			MethodName: "ProcessInvoiceSecret",
+			Handler:    _RoutingService_ProcessInvoiceSecret_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

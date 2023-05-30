@@ -8,6 +8,12 @@ service RoutingService {
   rpc RREQ(RREQRequest) returns (RoutingBaseResponse) {} // phase discovery
   rpc RREP(RREPRequest) returns (RoutingBaseResponse) {} // phase reply
   //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
+
+  rpc RequestInvoice(IREQMessage) returns (IREPMessage);
+  rpc ProcessRREQ(RREQMessage) returns (RoutingResponse);
+  rpc ProcessRREP(RREPMessage) returns (RoutingResponse);
+  rpc ProcessFwdMessage(FwdMessage) returns (FwdMessageResponse);
+  rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingResponse);
 }
 
 message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
@@ -38,4 +44,61 @@ enum RoutingErrorCode {
   PARAM_INVALID = 6;
   WRONG_NODE = 7;
   OK = 999;
+}
+
+// --------------------------------------------------------------------------------
+
+message IREQMessage {
+  int64 amount = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message IREPMessage {
+  string from = 1;
+  string to = 2;
+  string hash = 3;
+  int64 amount = 4;
+  string error_code = 5;
+}
+
+message InvoiceSecretMessage {
+  string hashcode = 1;
+  string secret = 2;
+  string dest = 3;
+}
+
+message RREQMessage {
+  string origin = 1;
+  string destination = 2;
+  int32 sequence = 3;
+  int32 hops = 4;
+}
+
+message RREPMessage {
+  string origin = 1;
+  string destination = 2;
+  int32 sequence = 3;
+  int32 hops = 4;
+}
+
+message RoutingResponse {
+  string response = 1;
+  string error_code = 2;
+}
+
+message FwdMessageResponse {
+  string response = 1;
+  string partner_sig = 2;
+  string error_code = 3;
+}
+
+message FwdMessage {
+  string action = 1;
+  string data = 2;
+  string from = 3;
+  string to = 4;
+  string hashcode_dest = 5;
+  string dest = 6;
+  string sig = 7;
 }

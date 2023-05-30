@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"sync"
 
@@ -21,7 +22,10 @@ func main() {
 	wg.Add(2)
 
 	fmt.Printf("Starting Lightning Network Node...\n")
-	config, err := config.LoadConfig()
+	configType := flag.String("config", "", "Configuration option")
+	flag.Parse()
+
+	config, err := config.LoadConfig(configType)
 	checkErr(err)
 
 	node, err := node.New(config)
@@ -33,7 +37,7 @@ func main() {
 	checkErr(err)
 
 	go func() {
-		rpcServer.RunGateway()
+		rpcServer.RunGateway(config.LNode.External)
 		wg.Done()
 	}()
 

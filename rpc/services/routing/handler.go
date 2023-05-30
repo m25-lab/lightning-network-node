@@ -31,7 +31,6 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 
 	// Try get by broadcast id
 	routings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
-		Type:        models.RoutingTypeDiscovery,
 		BroadcastID: req.BroadcastID,
 		//NextHop:     req.FromAddress,
 		Owner: req.ToAddress,
@@ -46,33 +45,9 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			ErrorCode: pb.RoutingErrorCode_RREQ_EXISTED,
 		}, fmt.Errorf("RREQ existed")
 	}
-
-	err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
-		ID:                 primitive.NewObjectID(),
-		Type:               models.RoutingTypeDiscovery,
-		BroadcastID:        req.BroadcastID,
-		DestinationAddress: req.SourceAddress,
-		NextHop:            req.SourceAddress,
-		Owner:              req.ToAddress,
-	})
-	if err != nil {
-		return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
-	}
-
 	// If not check is destination is selfEndpoint
 	if server.CheckIsDestination(ctx, req.DestinationAddress) {
 		// If yes --> return OK and go to RREP in background
-		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
-			ID:                 primitive.NewObjectID(),
-			Type:               models.RoutingTypeReply,
-			BroadcastID:        req.BroadcastID,
-			DestinationAddress: req.DestinationAddress,
-			NextHop:            req.ToAddress,
-			Owner:              req.ToAddress,
-		})
-		if err != nil {
-			return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert first RREQ error")
-		}
 		go server.StartRREP(req.FromAddress, pb.RREPRequest{
 			BroadcastID:        req.BroadcastID,
 			ToAddress:          req.FromAddress,
@@ -81,6 +56,17 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			SourceAddress:      req.DestinationAddress,
 		})
 	} else {
+		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
+			ID:                 primitive.NewObjectID(),
+			BroadcastID:        req.BroadcastID,
+			DestinationAddress: req.SourceAddress,
+			NextHop:            req.SourceAddress,
+			Owner:              req.ToAddress,
+		})
+		if err != nil {
+			return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
+		}
+
 		// If not --> Forward RREQ
 		// Build RREP message
 		forwardRREQRequest := *req
@@ -126,7 +112,6 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 	// Try get by broadcast id
 	repRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
 		BroadcastID:        req.BroadcastID,
-		Type:               models.RoutingTypeReply,
 		DestinationAddress: req.SourceAddress,
 		Owner:              req.ToAddress,
 	})
@@ -138,19 +123,6 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_RREP_EXISTED,
 		}, fmt.Errorf("RREP existed")
-	}
-
-	// save record
-	err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
-		ID:                 primitive.NewObjectID(),
-		Type:               models.RoutingTypeReply,
-		BroadcastID:        req.BroadcastID,
-		DestinationAddress: req.SourceAddress,
-		NextHop:            req.FromAddress,
-		Owner:              req.ToAddress,
-	})
-	if err != nil {
-		return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
 	}
 
 	// If have check is source location is selfEndpoint
@@ -167,9 +139,20 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 			}
 		}
 	} else {
+		// save record
+		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
+			ID:                 primitive.NewObjectID(),
+			BroadcastID:        req.BroadcastID,
+			DestinationAddress: req.SourceAddress,
+			NextHop:            req.FromAddress,
+			Owner:              req.ToAddress,
+		})
+		if err != nil {
+			return &pb.RoutingBaseResponse{}, fmt.Errorf("Insert new RREQ error")
+		}
+
 		reqRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
 			BroadcastID:        req.BroadcastID,
-			Type:               models.RoutingTypeDiscovery,
 			DestinationAddress: req.DestinationAddress,
 			Owner:              req.ToAddress,
 		})

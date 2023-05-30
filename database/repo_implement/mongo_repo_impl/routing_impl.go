@@ -35,12 +35,6 @@ func (mongo *RoutingRepoImplMongo) FindRouting(ctx context.Context, input models
 		filter["owner"] = input.Owner
 	}
 
-	if input.Type == "" {
-		return nil, fmt.Errorf("Routing type required")
-	} else {
-		filter["type"] = input.Type
-	}
-
 	if input.BroadcastID != "" {
 		filter["broadcast_id"] = input.BroadcastID
 	}

@@ -3,7 +3,7 @@ database:
   user: "admin"
   password: "8dEEFgSldfSerTHO"
   timeout: 10
-  dbname: "testing2526"
+  dbname: "testing_mml"
 
 node:
   chainId: "channel"
@@ -13,10 +13,11 @@ node:
   tokenSymbol: "token"
 
 lNode:
-  external: "0.0.0.0:2526"
+  external: "0.0.0.0:2525"
 
 telegram:
-  botId: 6050008901:AAEktP3Fh7N6VIQt_J4WhRuJThhQCYj-hOI
+  # botId: 6050008901:AAEktP3Fh7N6VIQt_J4WhRuJThhQCYj-hOI
+  botId: 6020944162:AAEzG6qFPMM3qpjsrUoQijcoiDxYOK8tALg
 
 kafka:
   brokers:

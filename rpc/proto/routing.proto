@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package channel;
+
+option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
+
+service RoutingService {
+  rpc RREQ(RREQRequest) returns (RoutingBaseResponse) {} // phase discovery
+  rpc RREP(RREPRequest) returns (RoutingBaseResponse) {} // phase reply
+  //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
+
+  rpc RequestInvoice(IREQMessage) returns (IREPMessage);
+  rpc ProcessFwdMessage(FwdMessage) returns (FwdMessageResponse);
+  rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingBaseResponse);
+}
+
+message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
+
+message RREQRequest {
+  string SourceAddress = 1;
+  string DestinationAddress = 2;
+  string BroadcastID = 3; // hash invoice
+  string FromAddress = 4;
+  string ToAddress = 5;
+}
+
+message RREPRequest {
+  string SourceAddress = 1;
+  string DestinationAddress = 2;
+  string BroadcastID = 3; // hash invoice
+  string FromAddress = 4;
+  string ToAddress = 5;
+}
+
+enum RoutingErrorCode {
+  SOME_THING_WENT_WRONG = 0;
+  RREQ_EXISTED = 1;
+  RREP_EXISTED = 2;
+  MORE_THAN_ONE_RREQ_EXISTED = 3;
+  FORWARD_RREP_ERROR = 4;
+  NOT_FOUND_NEIGHBOR_NODE = 5;
+  PARAM_INVALID = 6;
+  WRONG_NODE = 7;
+  VALIDATE_INVOICE_SECRET = 8;
+  INSERT_SECRET = 9;
+  DESTINATION_ADDRESS_FIND_BY_ADDRESS = 10;
+  OK = 999;
+}
+
+// --------------------------------------------------------------------------------
+
+message IREQMessage {
+  int64 amount = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message IREPMessage {
+  string from = 1;
+  string to = 2;
+  string hash = 3;
+  int64 amount = 4;
+  string error_code = 5;
+}
+
+message InvoiceSecretMessage {
+  string hashcode = 1;
+  string secret = 2;
+  string dest = 3;
+}
+
+message FwdMessageResponse {
+  string response = 1;
+  string partner_sig = 2;
+  string error_code = 3;
+}
+
+message FwdMessage {
+  string action = 1;
+  string data = 2;
+  string from = 3;
+  string to = 4;
+  string hashcode_dest = 5;
+  string dest = 6;
+  string sig = 7;
+}

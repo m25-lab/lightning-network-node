@@ -63,7 +63,7 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId: "",
-		ChannelID: multisigAddr + ":token:1",
+		ChannelId: multisigAddr + ":token:1",
 		Action:    models.OpenChannel,
 		Data:      string(strSigPayload),
 		From:      accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,

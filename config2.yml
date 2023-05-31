@@ -13,15 +13,15 @@ node:
   tokenSymbol: "token"
 
 lNode:
-  external: "0.0.0.0:2526"
+  # external: "0.0.0.0:2526"
   # external: "0.0.0.0:2525"
-  # external: "0.0.0.0:2527"
+  external: "0.0.0.0:2527"
   # external: "0.0.0.0:2528"
 
 telegram:
-  botId: 5604068366:AAGCRcFf6oWkJj7-DBwEojYgeWX9Ys7t5Og
+  # botId: 5604068366:AAGCRcFf6oWkJj7-DBwEojYgeWX9Ys7t5Og
   # botId: 6020944162:AAEzG6qFPMM3qpjsrUoQijcoiDxYOK8tALg
-  # botId: 6100908018:AAEI6mCj772VYdFfYmdxwt3lQwzt6-QA3cA
+  botId: 6100908018:AAEI6mCj772VYdFfYmdxwt3lQwzt6-QA3cA
   # botId: 6050008901:AAEktP3Fh7N6VIQt_J4WhRuJThhQCYj-hOI
 
 kafka:

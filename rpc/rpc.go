@@ -3,10 +3,12 @@ package rpc
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/m25-lab/lightning-network-node/client"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 	nodeInfoServer "github.com/m25-lab/lightning-network-node/rpc/services/node_info"
+	routingServer "github.com/m25-lab/lightning-network-node/rpc/services/routing"
 
 	"github.com/m25-lab/lightning-network-node/node"
 	messageServer "github.com/m25-lab/lightning-network-node/rpc/services/message"
@@ -23,6 +25,7 @@ type RPCServer struct {
 type ServiceServers struct {
 	messageServer  *messageServer.MessageServer
 	nodeInfoServer *nodeInfoServer.NodeInfoServer
+	routingServer  *routingServer.RoutingServer
 }
 
 func New(node *node.LightningNode) (*RPCServer, error) {
@@ -45,24 +48,30 @@ func New(node *node.LightningNode) (*RPCServer, error) {
 		return nil, err
 	}
 
+	rpcServer.serviceServers.routingServer, err = routingServer.New(node, client)
+	if err != nil {
+		return nil, err
+	}
+
 	rpcServer.grpcServer = grpc.NewServer()
 
 	//Register service servers
 	pb.RegisterMessageServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.messageServer)
 	pb.RegisterNodeServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.nodeInfoServer)
+	pb.RegisterRoutingServiceServer(rpcServer.grpcServer, rpcServer.serviceServers.routingServer)
 
 	reflection.Register(rpcServer.grpcServer)
 
 	return &rpcServer, nil
 }
 
-func (gateway *RPCServer) RunGateway() error {
-	listener, err := net.Listen("tcp", "0.0.0.0:2525")
+func (gateway *RPCServer) RunGateway(address string) error {
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Server is running in port 2525")
+	fmt.Println("Server is running in port", strings.Split(address, ":")[1])
 
 	err = gateway.grpcServer.Serve(listener)
 	if err != nil {

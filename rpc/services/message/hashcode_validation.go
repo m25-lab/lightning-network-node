@@ -46,7 +46,7 @@ func (server *MessageServer) ValidateExchagneHashcode(ctx context.Context, req *
 	savedMessage := &models.Message{
 		ID:         messageId,
 		OriginalID: messageId,
-		ChannelID:  req.ChannelID,
+		ChannelID:  req.ChannelId,
 		Action:     models.ExchangeHashcode,
 		Owner:      toAccount.AccAddress().String(),
 		Users:      []string{req.To, req.From},
@@ -58,6 +58,18 @@ func (server *MessageServer) ValidateExchagneHashcode(ctx context.Context, req *
 			Response:  err.Error(),
 			ErrorCode: "1005",
 		}, nil
+	}
+
+	exHashcodeData := models.ExchangeHashcodeData{
+		MySecret:        secret,
+		MyHashcode:      hashCode,
+		PartnerHashcode: exchangeHashcodeData.PartnerHashcode,
+		ChannelID:       savedMessage.ChannelID,
+	}
+
+	err = server.Node.Repository.ExchangeHashcode.InsertSecret(context.Background(), &exHashcodeData)
+	if err != nil {
+		return nil, err
 	}
 
 	payload, err = json.Marshal(models.ExchangeHashcodeData{

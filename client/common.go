@@ -144,7 +144,7 @@ func (client *Client) AddWhitelist(clientId string, toAddress string) (*models.M
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       message.ID.Hex(),
-		ChannelID:       message.ChannelID,
+		ChannelId:       message.ChannelID,
 		Action:          message.Action,
 		Data:            string(payload),
 		From:            acc.AccAddress().String() + "@" + client.Node.Config.LNode.External,
@@ -239,7 +239,7 @@ func (client *Client) AcceptAddWhitelist(clientId string, messageId string) (*mo
 	rpcClient := pb.NewMessageServiceClient(client.CreateConn(toEndpoint))
 	response, err := rpcClient.SendMessage(context.Background(), &pb.SendMessageRequest{
 		MessageId:       savedMessage.ID.Hex(),
-		ChannelID:       reliedMessage.ChannelID,
+		ChannelId:       reliedMessage.ChannelID,
 		Action:          models.AcceptAddWhitelist,
 		Data:            string(payload),
 		From:            fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,

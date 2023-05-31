@@ -11,7 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized) (*pb.SendMessageResponse, error) {
+func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized, clientId string, ownAddr string) (*pb.SendMessageResponse, error) {
+	selfAddress := toAccount.AccAddress().String() + "@" + server.Node.Config.LNode.External
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
 
 	var myCommitmentPayload models.CreateCommitmentData
@@ -61,7 +62,7 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
 		ID:         messageId,
 		OriginalID: messageId,
-		ChannelID:  req.ChannelID,
+		ChannelID:  req.ChannelId,
 		Action:     models.ExchangeCommitment,
 		Owner:      toAccount.AccAddress().String(),
 		Data:       req.Data,
@@ -116,7 +117,31 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 			ErrorCode: "1006",
 		}, nil
 	}
-
+	if myCommitmentPayload.FwdDest != "" && myCommitmentPayload.HashcodeDest != "" {
+		if myCommitmentPayload.FwdDest != ownAddr {
+			go func() {
+				//find next
+				nextHop, err := server.Client.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, selfAddress, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
+				if err != nil {
+					println("Fwd Commitment: nextHop-FindByDestAndBroadcastId:", err.Error())
+					return
+				}
+				//find receivercommit
+				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, myCommitmentPayload.HashcodeDest)
+				if err != nil {
+					println("Fwd Commitment: rC-FindReceiverCommitByDestHash:", err.Error())
+					return
+				}
+				rCData := models.ReceiverCommitment{}
+				err = json.Unmarshal([]byte(rC.Data), &rCData)
+				if err != nil {
+					println("Fwd Commitment: nextHop-Unmarshal:", err.Error())
+					return
+				}
+				server.Client.LnTransfer(clientId, nextHop.NextHop, rCData.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
+			}()
+		}
+	}
 	return &pb.SendMessageResponse{
 		Response:  string(partnerCommitmentPayload),
 		ErrorCode: "",

@@ -9,3 +9,10 @@ type Routing struct {
 	NextHop            string             `bson:"next_hop"`
 	Owner              string             `bson:"owner"`
 }
+
+type RREQData struct {
+	Amount int64 `json:"amount"`
+}
+
+type RREPData struct {
+}

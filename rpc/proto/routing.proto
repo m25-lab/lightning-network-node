@@ -25,6 +25,7 @@ message RREQRequest {
   string BroadcastID = 3; // hash invoice
   string FromAddress = 4;
   string ToAddress = 5;
+  string Data = 6;
 }
 
 message RREPRequest {
@@ -33,6 +34,7 @@ message RREPRequest {
   string BroadcastID = 3; // hash invoice
   string FromAddress = 4;
   string ToAddress = 5;
+  string Data = 6;
 }
 
 message RERRRequest {

@@ -37,6 +37,14 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		}, nil
 	}
 
+	rreqData := ExtractDataFromRREQ(req.Data)
+	if rreqData == nil {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
+			Response:  "Empty data",
+		}, nil
+	}
+
 	// Try get by broadcast id
 	routings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
 		BroadcastID: req.BroadcastID,
@@ -112,11 +120,18 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 
 		// fmt.Println("neighborNodes ", neighborNodes)
 		for _, neighborNode := range neighborNodes {
-			if neighborNode == req.SourceAddress {
+			neighborNodeAddress := neighborNode.PartnerAddress
+			if neighborNodeAddress == req.SourceAddress {
 				continue
 			}
-			forwardRREQRequest.ToAddress = neighborNode
-			go server.ForwardRREQ(neighborNode, forwardRREQRequest)
+			a, err := server.GetChannelBalance(ctx, getWalletAddress(req.ToAddress), neighborNode.MultiAddress)
+			if err != nil {
+				continue
+			}
+			if a.CoinToHtlc > rreqData.Amount {
+				forwardRREQRequest.ToAddress = neighborNodeAddress
+				go server.ForwardRREQ(neighborNodeAddress, forwardRREQRequest)
+			}
 		}
 	}
 
@@ -137,6 +152,14 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_WRONG_NODE,
 			Response:  "Wrong node",
+		}, nil
+	}
+
+	rrepData := ExtractDataFromRREP(req.Data)
+	if rrepData == nil {
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
+			Response:  "Empty data",
 		}, nil
 	}
 
@@ -242,11 +265,12 @@ func (server *RoutingServer) RERR(ctx context.Context, req *pb.RERRRequest) (*pb
 		neighborNodes, err := server.GetNeighborNodes(req.ToAddress)
 		if err == nil {
 			for _, neighborNode := range neighborNodes {
-				if neighborNode == req.FromAddress {
+				neighborNodeAddress := neighborNode.PartnerAddress
+				if neighborNodeAddress == req.FromAddress {
 					continue
 				}
-				req.ToAddress = neighborNode
-				go server.StartRERR(neighborNode, *req)
+				req.ToAddress = neighborNodeAddress
+				go server.StartRERR(neighborNodeAddress, *req)
 			}
 		}
 	}
@@ -254,6 +278,24 @@ func (server *RoutingServer) RERR(ctx context.Context, req *pb.RERRRequest) (*pb
 	return &pb.RoutingBaseResponse{
 		ErrorCode: pb.RoutingErrorCode_OK,
 	}, nil
+}
+
+func (server *RoutingServer) GetChannelBalance(ctx context.Context, address string, multisignAddress string) (*models.CreateCommitmentData, error) {
+	lastestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		address,
+		fmt.Sprint(multisignAddress+":token:1"),
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		return nil, err
+	}
+	payload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
+	if err != nil {
+		return nil, err
+	}
+	return &payload, nil
 }
 
 func (server *RoutingServer) CheckSelfIsTargetNode(ctx context.Context, targetAdress string) bool {
@@ -291,11 +333,37 @@ func extractAdress(address string) (walletAddress, endpoint string) {
 	return
 }
 
+func ExtractDataFromRREQ(dataString string) *models.RREQData {
+	var data models.RREQData
+	byte, err := json.Marshal(dataString)
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal(byte, &data)
+	if err != nil {
+		return nil
+	}
+	return &data
+}
+
+func ExtractDataFromRREP(dataString string) *models.RREPData {
+	var data models.RREPData
+	byte, err := json.Marshal(dataString)
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal(byte, &data)
+	if err != nil {
+		return nil
+	}
+	return &data
+}
+
 func (server *RoutingServer) GetSelfEndpoint() string {
 	return server.Node.Config.LNode.External
 }
 
-func (server *RoutingServer) GetNeighborNodes(address string) ([]string, error) {
+func (server *RoutingServer) GetNeighborNodes(address string) ([]models.Whitelist, error) {
 	// Query white list
 	neighborAdress, err := server.Node.Repository.Whitelist.FindMany(context.Background(), getWalletAddress(address))
 	if err != nil {
@@ -303,12 +371,7 @@ func (server *RoutingServer) GetNeighborNodes(address string) ([]string, error) 
 	}
 
 	// find endpoint of address
-	res := []string{}
-	for _, wl := range neighborAdress {
-		res = append(res, wl.PartnerAddress)
-	}
-
-	return res, nil
+	return neighborAdress, nil
 }
 
 func (server *RoutingServer) StartRREP(toAddress string, req pb.RREPRequest) error {

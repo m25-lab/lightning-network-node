@@ -84,3 +84,15 @@ func (mongo *RoutingRepoImplMongo) FindByDestAndBroadcastId(ctx context.Context,
 
 	return &nextHop, nil
 }
+
+func (mongo *RoutingRepoImplMongo) DeletedRoutingByNextHop(ctx context.Context, nextHop string, owner string) error {
+	_, err := mongo.Db.Collection(Address).DeleteMany(ctx, bson.M{
+		"owner":    owner,
+		"next_hop": nextHop,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

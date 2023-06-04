@@ -7,7 +7,7 @@ option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 service RoutingService {
   rpc RREQ(RREQRequest) returns (RoutingBaseResponse) {} // phase discovery
   rpc RREP(RREPRequest) returns (RoutingBaseResponse) {} // phase reply
-  //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
+  rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
 
   rpc RequestInvoice(IREQMessage) returns (IREPMessage);
   rpc ProcessFwdMessage(FwdMessage) returns (FwdMessageResponse);
@@ -32,6 +32,13 @@ message RREPRequest {
   string ToAddress = 5;
 }
 
+message RERRRequest {
+  string DestinationAddress = 1;
+  string FromAddress = 2;
+  string ToAddress = 3;
+  string ErrorAddress = 4;
+}
+
 enum RoutingErrorCode {
   SOME_THING_WENT_WRONG = 0;
   RREQ_EXISTED = 1;
@@ -44,6 +51,8 @@ enum RoutingErrorCode {
   VALIDATE_INVOICE_SECRET = 8;
   INSERT_SECRET = 9;
   DESTINATION_ADDRESS_FIND_BY_ADDRESS = 10;
+  INSERT_ROUTING_ERROR = 11;
+  ROUTE_NOT_EXISTED = 12;
   OK = 999;
 }
 

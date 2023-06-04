@@ -13,6 +13,7 @@ node:
   tokenSymbol: "token"
 
 lNode:
+  timeoutRequest: 3
   # external: "0.0.0.0:2526"
   external: "0.0.0.0:2525"
   # external: "0.0.0.0:2527"

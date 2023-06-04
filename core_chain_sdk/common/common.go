@@ -7,6 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	channelTypes "github.com/m25-lab/channel/x/channel/types"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"math"
 	"math/big"
 	"strconv"
@@ -176,4 +179,83 @@ func ToHashCode(secret string) string {
 	hash := sha256.Sum256([]byte(secret))
 	hashEncode := base64.StdEncoding.EncodeToString(hash[:])
 	return hashEncode
+}
+
+// Own Hashcode
+func BuildAndBroadcastWithdrawTimelock(clientCtx *client.Context, account *account.PrivateKeySerialized, hashcode string, multisig string, address string) (*types.TxResponse, string, error) {
+	msg := channelTypes.MsgWithdrawTimelock{
+		Creator: address,
+		To:      address,
+		Index:   fmt.Sprintf("%v:%v", multisig, hashcode),
+	}
+
+	commitmentRequest := channel.SignMsgRequest{
+		Msg:      &msg,
+		GasLimit: 200000,
+		GasPrice: "0stake",
+	}
+	return BroadcastTx(clientCtx, account, commitmentRequest)
+}
+
+// Partner Hashcode
+func BuildAndBroadcastWithdrawHashlock(clientCtx *client.Context, account *account.PrivateKeySerialized, hashcode string, multisig string, address string, secret string) (*types.TxResponse, string, error) {
+	msg := channelTypes.MsgWithdrawHashlock{
+		Creator: address,
+		To:      address,
+		Index:   fmt.Sprintf("%v:%v", multisig, hashcode),
+		Secret:  secret,
+	}
+
+	commitmentRequest := channel.SignMsgRequest{
+		Msg:      &msg,
+		GasLimit: 200000,
+		GasPrice: "0stake",
+	}
+	return BroadcastTx(clientCtx, account, commitmentRequest)
+}
+
+func BroadcastTx(client *client.Context, account *account.PrivateKeySerialized, request channel.SignMsgRequest) (*types.TxResponse, string, error) {
+
+	newTx := NewTx(
+		*client,
+		account,
+		request.GasLimit,
+		request.GasPrice,
+	)
+
+	txBuilder, err := newTx.BuildUnsignedTx(request.Msg)
+	if err != nil {
+		return nil, "", err
+	}
+
+	err = newTx.SignTx(txBuilder)
+	if err != nil {
+		return nil, "", err
+	}
+
+	txJson, err := TxBuilderJsonEncoder(client.TxConfig, txBuilder)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Tx rawData", string(txJson))
+
+	txByte, err := TxBuilderJsonDecoder(client.TxConfig, txJson)
+	if err != nil {
+		panic(err)
+	}
+
+	txHash := TxHash(txByte)
+	fmt.Println("txHash", txHash)
+
+	//fmt.Println(ethCommon.BytesToHash(txByte).String())
+
+	res, err := client.BroadcastTxCommit(txByte)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(res)
+
+	return res, txHash, err
 }

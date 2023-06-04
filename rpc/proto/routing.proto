@@ -14,7 +14,10 @@ service RoutingService {
   rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingBaseResponse);
 }
 
-message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
+message RoutingBaseResponse {
+  RoutingErrorCode ErrorCode = 1;
+  string Response = 2;
+}
 
 message RREQRequest {
   string SourceAddress = 1;

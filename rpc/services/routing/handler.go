@@ -72,6 +72,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		}, nil
 	}
 
+	newSequenceNumber := time.Now().Unix()
 	if !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
 		// fmt.Println("RREQ")
 		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
@@ -81,6 +82,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			NextHop:            req.FromAddress,
 			HopCounter:         rreqData.HopCounter + 1,
 			Owner:              req.ToAddress,
+			SequenceNumber:     newSequenceNumber,
 		})
 		if err != nil {
 			return &pb.RoutingBaseResponse{
@@ -98,12 +100,15 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		// If not --> Forward RREQ
 		// Build RREP message
 		// forwardRREQRequest := *req
+		rreqData.HopCounter++
+		rreqData.SequenceNumber = newSequenceNumber
+		byteData, _ := json.Marshal(rreqData)
 		forwardRREQRequest := pb.RREQRequest{
 			SourceAddress:      req.SourceAddress,
 			DestinationAddress: req.DestinationAddress,
 			BroadcastID:        req.BroadcastID,
 			FromAddress:        req.ToAddress,
-			Data:               req.Data,
+			Data:               string(byteData),
 		}
 
 		// Broadcast to all channel opened in background
@@ -180,10 +185,22 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 	}
 
 	var matchRoutingGenFromRREQ *models.Routing
+	newSequenceNumber := time.Now().Unix()
+	skipInsert := false
 	if len(routings) > 0 {
 		for _, routing := range routings {
 			// check is existed forward path gen from other RREP
 			if routing.DestinationAddress == req.SourceAddress {
+				if rrepData.SequenceNumber > routing.SequenceNumber {
+					// upsert routing gen from RREP
+					routing.SequenceNumber = rrepData.SequenceNumber
+					routing.HopCounter = rrepData.HopCounter
+					err = server.Node.Repository.Routing.UpdateRoute(ctx, routing.ID, routing)
+					if err != nil {
+						skipInsert = true
+					}
+				}
+
 				return &pb.RoutingBaseResponse{
 					ErrorCode: pb.RoutingErrorCode_RREP_EXISTED,
 					Response:  "Existed forward path gen from other RREP",
@@ -196,7 +213,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		}
 	}
 
-	if !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
+	if !skipInsert && !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
 		// save record
 		// fmt.Println("RREP")
 		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
@@ -224,7 +241,11 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 			if err == nil {
 				msg := tgbotapi.NewMessage(clientId, "")
 				msg.ParseMode = "Markdown"
-				msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully.*\n", req.BroadcastID)
+				if skipInsert {
+					msg.Text = fmt.Sprintf("✅ *Update new route for `%s` successfully.*\n", req.BroadcastID)
+				} else {
+					msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully.*\n", req.BroadcastID)
+				}
 				_, _ = server.Client.Bot.Send(msg)
 			}
 		}
@@ -239,6 +260,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		}
 
 		rrepData.HopCounter++
+		rrepData.SequenceNumber = newSequenceNumber
 		byteData, _ := json.Marshal(rrepData)
 		forwardRREPRequest := pb.RREPRequest{
 			SourceAddress:      req.SourceAddress,

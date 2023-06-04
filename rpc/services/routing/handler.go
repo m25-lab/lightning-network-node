@@ -19,9 +19,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type RoutingGrpcHandler struct {
-}
-
 func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb.RoutingBaseResponse, error) {
 	if req == nil {
 		return &pb.RoutingBaseResponse{
@@ -62,7 +59,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			// check is existed backward path gen from RREP
 			if routing.DestinationAddress == req.DestinationAddress {
 				// start RREP in background and response OK
-				go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(*req))
+				go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(req))
 
 				return &pb.RoutingBaseResponse{
 					ErrorCode: pb.RoutingErrorCode_OK,
@@ -82,6 +79,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			BroadcastID:        req.BroadcastID,
 			DestinationAddress: req.SourceAddress,
 			NextHop:            req.FromAddress,
+			HopCounter:         rreqData.HopCounter + 1,
 			Owner:              req.ToAddress,
 		})
 		if err != nil {
@@ -95,12 +93,18 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 	// If not check is destination is selfEndpoint
 	if server.CheckIsDestination(ctx, req.DestinationAddress) {
 		// If yes --> return OK and go to RREP in background
-		go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(*req))
+		go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(req))
 	} else {
 		// If not --> Forward RREQ
 		// Build RREP message
-		forwardRREQRequest := *req
-		forwardRREQRequest.FromAddress = req.ToAddress
+		// forwardRREQRequest := *req
+		forwardRREQRequest := pb.RREQRequest{
+			SourceAddress:      req.SourceAddress,
+			DestinationAddress: req.DestinationAddress,
+			BroadcastID:        req.BroadcastID,
+			FromAddress:        req.ToAddress,
+			Data:               req.Data,
+		}
 
 		// Broadcast to all channel opened in background
 		neighborNodes, err := server.GetNeighborNodes(forwardRREQRequest.FromAddress)
@@ -130,7 +134,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			}
 			if a.CoinToHtlc > rreqData.Amount {
 				forwardRREQRequest.ToAddress = neighborNodeAddress
-				go server.ForwardRREQ(neighborNodeAddress, forwardRREQRequest)
+				go server.ForwardRREQ(neighborNodeAddress, &forwardRREQRequest)
 			}
 		}
 	}
@@ -192,14 +196,6 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		}
 	}
 
-	if matchRoutingGenFromRREQ == nil {
-		log.Println("Routing gen from RREQ not existed")
-		return &pb.RoutingBaseResponse{
-			ErrorCode: pb.RoutingErrorCode_ROUTE_NOT_EXISTED,
-			Response:  "Routing gen from RREQ not existed",
-		}, nil
-	}
-
 	if !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
 		// save record
 		// fmt.Println("RREP")
@@ -208,6 +204,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 			BroadcastID:        req.BroadcastID,
 			DestinationAddress: req.SourceAddress,
 			NextHop:            req.FromAddress,
+			HopCounter:         rrepData.HopCounter + 1,
 			Owner:              req.ToAddress,
 		})
 		if err != nil {
@@ -233,10 +230,25 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 		}
 	} else {
 		// If not return ok then build next RREPRequest then return OK and RREP next node in background
-		forwardRREPRequest := *req
-		forwardRREPRequest.FromAddress = req.ToAddress
-		forwardRREPRequest.ToAddress = matchRoutingGenFromRREQ.NextHop
-		go server.ForwardRREP(matchRoutingGenFromRREQ.NextHop, forwardRREPRequest)
+		if matchRoutingGenFromRREQ == nil {
+			log.Println("Routing gen from RREQ not existed")
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_ROUTE_NOT_EXISTED,
+				Response:  "Routing gen from RREQ not existed",
+			}, nil
+		}
+
+		rrepData.HopCounter++
+		byteData, _ := json.Marshal(rrepData)
+		forwardRREPRequest := pb.RREPRequest{
+			SourceAddress:      req.SourceAddress,
+			DestinationAddress: req.DestinationAddress,
+			BroadcastID:        req.BroadcastID,
+			FromAddress:        req.ToAddress,
+			ToAddress:          matchRoutingGenFromRREQ.NextHop,
+			Data:               string(byteData),
+		}
+		go server.ForwardRREP(matchRoutingGenFromRREQ.NextHop, &forwardRREPRequest)
 	}
 
 	return &pb.RoutingBaseResponse{
@@ -270,7 +282,7 @@ func (server *RoutingServer) RERR(ctx context.Context, req *pb.RERRRequest) (*pb
 					continue
 				}
 				req.ToAddress = neighborNodeAddress
-				go server.StartRERR(neighborNodeAddress, *req)
+				go server.StartRERR(neighborNodeAddress, req)
 			}
 		}
 	}
@@ -374,14 +386,14 @@ func (server *RoutingServer) GetNeighborNodes(address string) ([]models.Whitelis
 	return neighborAdress, nil
 }
 
-func (server *RoutingServer) StartRREP(toAddress string, req pb.RREPRequest) error {
+func (server *RoutingServer) StartRREP(toAddress string, req *pb.RREPRequest) error {
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
 	// time..Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
-	response, err := rpcClient.RREP(ctxTimeout, &req)
+	response, err := rpcClient.RREP(ctxTimeout, req)
 	if err != nil {
 		log.Println("StartRREP: ", err.Error())
 		return err
@@ -393,14 +405,14 @@ func (server *RoutingServer) StartRREP(toAddress string, req pb.RREPRequest) err
 	return nil
 }
 
-func (server *RoutingServer) StartRERR(toAddress string, req pb.RERRRequest) error {
+func (server *RoutingServer) StartRERR(toAddress string, req *pb.RERRRequest) error {
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
 	// time..Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
-	response, err := rpcClient.RERR(ctxTimeout, &req)
+	response, err := rpcClient.RERR(ctxTimeout, req)
 	if err != nil {
 		log.Println("StartRERR: ", err.Error())
 		return err
@@ -412,14 +424,14 @@ func (server *RoutingServer) StartRERR(toAddress string, req pb.RERRRequest) err
 	return nil
 }
 
-func (server *RoutingServer) ForwardRREQ(toAddress string, req pb.RREQRequest) error {
+func (server *RoutingServer) ForwardRREQ(toAddress string, req *pb.RREQRequest) error {
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
 	// time.Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
-	response, err := rpcClient.RREQ(ctxTimeout, &req)
+	response, err := rpcClient.RREQ(ctxTimeout, req)
 	if err != nil {
 		log.Println("ForwardRREQ: ", err.Error())
 		return err
@@ -431,14 +443,14 @@ func (server *RoutingServer) ForwardRREQ(toAddress string, req pb.RREQRequest) e
 	return nil
 }
 
-func (server *RoutingServer) ForwardRREP(toAddress string, req pb.RREPRequest) error {
+func (server *RoutingServer) ForwardRREP(toAddress string, req *pb.RREPRequest) error {
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
 	// time.Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
-	response, err := rpcClient.RREP(ctxTimeout, &req)
+	response, err := rpcClient.RREP(ctxTimeout, req)
 	if err != nil {
 		log.Println("ForwardRREP: ", err.Error())
 		return err
@@ -450,8 +462,8 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req pb.RREPRequest) e
 	return nil
 }
 
-func BuildRREPFromRREQ(rreq pb.RREQRequest) (rrep pb.RREPRequest) {
-	rrep = pb.RREPRequest{
+func BuildRREPFromRREQ(rreq *pb.RREQRequest) (rrep *pb.RREPRequest) {
+	rrep = &pb.RREPRequest{
 		BroadcastID:        rreq.BroadcastID,
 		ToAddress:          rreq.FromAddress,
 		FromAddress:        rreq.ToAddress,
@@ -461,7 +473,7 @@ func BuildRREPFromRREQ(rreq pb.RREQRequest) (rrep pb.RREPRequest) {
 	return
 }
 
-func BuildRERRFromRREQ(rreq pb.RREQRequest) (rerr pb.RERRRequest) {
+func BuildRERRFromRREQ(rreq *pb.RREQRequest) (rerr pb.RERRRequest) {
 	rerr = pb.RERRRequest{
 		DestinationAddress: rreq.DestinationAddress,
 		FromAddress:        rreq.ToAddress,
@@ -470,7 +482,7 @@ func BuildRERRFromRREQ(rreq pb.RREQRequest) (rerr pb.RERRRequest) {
 	return
 }
 
-func BuildRERRFromRREP(rrep pb.RREPRequest) (rerr pb.RERRRequest) {
+func BuildRERRFromRREP(rrep *pb.RREPRequest) (rerr pb.RERRRequest) {
 	rerr = pb.RERRRequest{
 		DestinationAddress: rrep.DestinationAddress,
 		FromAddress:        rrep.ToAddress,
@@ -684,6 +696,12 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		To:           req.To,
 		HashcodeDest: req.HashcodeDest,
 	})
+	if err != nil {
+		return &pb.FwdMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
 
 	//Build and sign receiver commit
 	receiverCMsg := channelClient.CreateReceiverCommitmentMsg(

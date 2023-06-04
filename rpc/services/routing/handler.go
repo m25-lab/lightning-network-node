@@ -43,8 +43,19 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		return &pb.RoutingBaseResponse{}, err
 	}
 
-	// If have --> return error existed
 	if len(routings) > 0 {
+		for _, routing := range routings {
+			// check is existed backward path gen from RREP
+			if routing.DestinationAddress == req.DestinationAddress {
+				// start RREP in background and response OK
+				go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(*req))
+
+				return &pb.RoutingBaseResponse{
+					ErrorCode: pb.RoutingErrorCode_OK,
+				}, nil
+			}
+		}
+
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_RREQ_EXISTED,
 		}, fmt.Errorf("RREQ existed")
@@ -67,13 +78,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 	// If not check is destination is selfEndpoint
 	if server.CheckIsDestination(ctx, req.DestinationAddress) {
 		// If yes --> return OK and go to RREP in background
-		go server.StartRREP(req.FromAddress, pb.RREPRequest{
-			BroadcastID:        req.BroadcastID,
-			ToAddress:          req.FromAddress,
-			FromAddress:        req.ToAddress,
-			DestinationAddress: req.SourceAddress,
-			SourceAddress:      req.DestinationAddress,
-		})
+		go server.StartRREP(req.FromAddress, BuildRREPFromRREQ(*req))
 	} else {
 		// If not --> Forward RREQ
 		// Build RREP message
@@ -121,19 +126,27 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 	}
 
 	// Try get by broadcast id
-	repRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
-		BroadcastID:        req.BroadcastID,
-		DestinationAddress: req.SourceAddress,
-		Owner:              req.ToAddress,
+	routings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
+		BroadcastID: req.BroadcastID,
+		Owner:       req.ToAddress,
 	})
 	if err != nil && err.Error() != "NOT_FOUND" {
 		return &pb.RoutingBaseResponse{}, err
 	}
 
-	if len(repRoutings) > 0 {
-		return &pb.RoutingBaseResponse{
-			ErrorCode: pb.RoutingErrorCode_RREP_EXISTED,
-		}, fmt.Errorf("RREP existed")
+	var matchRoutingGenFromRREQ *models.Routing
+	if len(routings) > 0 {
+		for _, routing := range routings {
+			// check is existed forward path gen from other RREP
+			if routing.DestinationAddress == req.SourceAddress {
+				return &pb.RoutingBaseResponse{
+					ErrorCode: pb.RoutingErrorCode_RREP_EXISTED,
+				}, fmt.Errorf("RREP existed")
+			} else if routing.DestinationAddress == req.DestinationAddress {
+				matchRoutingGenFromRREQ = routing
+				break
+			}
+		}
 	}
 
 	if !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
@@ -165,22 +178,11 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 			}
 		}
 	} else {
-
-		reqRoutings, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
-			BroadcastID:        req.BroadcastID,
-			DestinationAddress: req.DestinationAddress,
-			Owner:              req.ToAddress,
-		})
-		if err != nil && err.Error() != "NOT_FOUND" {
-			return &pb.RoutingBaseResponse{}, err
-		}
-
-		reqRouting := reqRoutings[0]
 		// If not return ok then build next RREPRequest then return OK and RREP next node in background
 		forwardRREPRequest := *req
 		forwardRREPRequest.FromAddress = req.ToAddress
-		forwardRREPRequest.ToAddress = reqRouting.NextHop
-		go server.ForwardRREP(reqRouting.NextHop, forwardRREPRequest)
+		forwardRREPRequest.ToAddress = matchRoutingGenFromRREQ.NextHop
+		go server.ForwardRREP(matchRoutingGenFromRREQ.NextHop, forwardRREPRequest)
 	}
 
 	return &pb.RoutingBaseResponse{
@@ -277,6 +279,17 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req pb.RREPRequest) e
 		return err
 	}
 	return nil
+}
+
+func BuildRREPFromRREQ(rreq pb.RREQRequest) (rrep pb.RREPRequest) {
+	rrep = pb.RREPRequest{
+		BroadcastID:        rreq.BroadcastID,
+		ToAddress:          rreq.FromAddress,
+		FromAddress:        rreq.ToAddress,
+		DestinationAddress: rreq.SourceAddress,
+		SourceAddress:      rreq.DestinationAddress,
+	}
+	return
 }
 
 func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingBaseResponse, error) {

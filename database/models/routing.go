@@ -16,6 +16,7 @@ type RREQData struct {
 	Amount         int64 `json:"amount"`
 	HopCounter     int64 `json:"hopCounter"`
 	SequenceNumber int64 `json:"sequenceNumber"`
+	RemainReward   int64 `json:"remainReward"`
 }
 
 type RREPData struct {

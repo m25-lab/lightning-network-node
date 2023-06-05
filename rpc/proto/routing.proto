@@ -42,6 +42,7 @@ message RERRRequest {
   string FromAddress = 2;
   string ToAddress = 3;
   string ErrorAddress = 4;
+  string Message = 5;
 }
 
 enum RoutingErrorCode {
@@ -58,6 +59,7 @@ enum RoutingErrorCode {
   DESTINATION_ADDRESS_FIND_BY_ADDRESS = 10;
   INSERT_ROUTING_ERROR = 11;
   ROUTE_NOT_EXISTED = 12;
+  NOT_ENOUGH_REWARD = 13;
   OK = 999;
 }
 

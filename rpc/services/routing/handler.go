@@ -102,6 +102,13 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		// forwardRREQRequest := *req
 		rreqData.HopCounter++
 		rreqData.SequenceNumber = newSequenceNumber
+		rreqData.RemainReward = rreqData.RemainReward - GenerateRewardFromRREQ(req)
+		if rreqData.RemainReward < 0 {
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_NOT_ENOUGH_REWARD,
+				Response:  "Not enough reward",
+			}, nil
+		}
 		byteData, _ := json.Marshal(rreqData)
 		forwardRREQRequest := pb.RREQRequest{
 			SourceAddress:      req.SourceAddress,
@@ -461,6 +468,7 @@ func (server *RoutingServer) ForwardRREQ(toAddress string, req *pb.RREQRequest) 
 		if response.ErrorCode != pb.RoutingErrorCode_OK {
 			log.Println("ForwardRREQ: ", response)
 		}
+		go server.StartRERR(req.FromAddress, BuildRERRFromRREQ(req, response.Response))
 	}
 	return nil
 }
@@ -480,6 +488,7 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req *pb.RREPRequest) 
 		if response.ErrorCode != pb.RoutingErrorCode_OK {
 			log.Println("ForwardRREP: ", response)
 		}
+		go server.StartRERR(req.FromAddress, BuildRERRFromRREP(req, response.Response))
 	}
 	return nil
 }
@@ -495,20 +504,22 @@ func BuildRREPFromRREQ(rreq *pb.RREQRequest) (rrep *pb.RREPRequest) {
 	return
 }
 
-func BuildRERRFromRREQ(rreq *pb.RREQRequest) (rerr pb.RERRRequest) {
-	rerr = pb.RERRRequest{
+func BuildRERRFromRREQ(rreq *pb.RREQRequest, msg string) (rerr *pb.RERRRequest) {
+	rerr = &pb.RERRRequest{
 		DestinationAddress: rreq.DestinationAddress,
 		FromAddress:        rreq.ToAddress,
 		ToAddress:          rreq.FromAddress,
+		Message:            msg,
 	}
 	return
 }
 
-func BuildRERRFromRREP(rrep *pb.RREPRequest) (rerr pb.RERRRequest) {
-	rerr = pb.RERRRequest{
+func BuildRERRFromRREP(rrep *pb.RREPRequest, msg string) (rerr *pb.RERRRequest) {
+	rerr = &pb.RERRRequest{
 		DestinationAddress: rrep.DestinationAddress,
 		FromAddress:        rrep.ToAddress,
 		ToAddress:          rrep.FromAddress,
+		Message:            msg,
 	}
 	return
 }
@@ -568,6 +579,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		amount := receiverCommit.CoinTransfer
 		nexthops, err := server.Node.Repository.Routing.FindRouting(ctx, models.Routing{
 			BroadcastID: req.Hashcode,
+			// Owner: , // TODO: Blank owner
 		})
 		if err != nil {
 			println("FindRouting", err.Error())
@@ -807,4 +819,8 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		PartnerSig: strSigReceiver,
 		ErrorCode:  "",
 	}, nil
+}
+
+func GenerateRewardFromRREQ(rreq *pb.RREQRequest) int64 {
+	return 0
 }

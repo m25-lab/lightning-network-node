@@ -14,7 +14,6 @@ type InvoiceData struct {
 	Secret string `json:"secret" bson:"secret"`
 }
 
-// TODO: update field name to match in chanel
 type SenderCommitment struct {
 	Creator          string `json:"creator" bson:"creator"`
 	From             string `json:"from" bson:"from"`

@@ -258,7 +258,7 @@ func (b *Bank) TransferMultiSignRawData(param *TransferMultiSignRequest) (client
 		return nil, errors.Wrap(err, "BuildUnsignedTx")
 	}
 
-	err = newTx.GenerateMultisig(txBuilder, mulSignAccPublicKey, param.Sigs)
+	err = newTx.GenerateMultisig(txBuilder, mulSignAccPublicKey, b.coinType, param.Sigs)
 	if err != nil {
 		return nil, errors.Wrap(err, "GenerateMultisig")
 	}

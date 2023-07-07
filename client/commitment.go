@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, fwdDest *string, hashcodeDest *string) (*models.Message, error) {
+func (client *Client) ExchangeCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, fwdDest *string, hashcodeDest *string, isFirstCommit bool) (*models.Message, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
 	//get partner hashcode
@@ -50,23 +50,24 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 	}
 
 	//sign l1 commitment
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, isFirstCommit)
 	if err != nil {
 		return nil, err
 	}
 
 	//create ln message
 	msg := models.CreateCommitmentData{
-		Creator:          commitmentMsg.Creator,
-		ChannelID:        commitmentMsg.ChannelID,
-		From:             commitmentMsg.From,
-		Timelock:         commitmentMsg.Timelock,
-		ToTimelockAddr:   commitmentMsg.ToTimelockAddr,
-		ToHashlockAddr:   commitmentMsg.ToHashlockAddr,
-		CoinToCreator:    commitmentMsg.CoinToCreator.Amount.Int64(),
-		CoinToHtlc:       commitmentMsg.CoinToHtlc.Amount.Int64(),
-		Hashcode:         commitmentMsg.Hashcode,
-		PartnerSignature: strSig,
+		Creator:           commitmentMsg.Creator,
+		ChannelID:         commitmentMsg.ChannelID,
+		From:              commitmentMsg.From,
+		Timelock:          commitmentMsg.Timelock,
+		ToTimelockAddr:    commitmentMsg.ToTimelockAddr,
+		ToHashlockAddr:    commitmentMsg.ToHashlockAddr,
+		CoinToCreator:     commitmentMsg.CoinToCreator.Amount.Int64(),
+		CoinToHtlc:        commitmentMsg.CoinToHtlc.Amount.Int64(),
+		Hashcode:          commitmentMsg.Hashcode,
+		PartnerSignature:  strSig,
+		IsFirstCommitment: isFirstCommit,
 	}
 
 	if fwdDest != nil && hashcodeDest != nil {
@@ -127,10 +128,34 @@ func (client *Client) ExchangeCommitment(clientId string, accountPacked *Account
 		return nil, errors.New("partner commitment is not match")
 	}
 
-	//check partner signature
-	//@TODO
+	myCommitmentMsg := channelClient.CreateCommitmentMsg(
+		multisigAddr,
+		accountPacked.fromAccount.AccAddress().String(),
+		toAmount,
+		accountPacked.toAccount.AccAddress().String(),
+		fromAmount,
+		exchangeHashcodeData.MyHashcode,
+	)
 
-	savedMessage.Data = string(reponse.Response)
+	//create l1 sign message
+	signCommitmentMsg = channel.SignMsgRequest{
+		Msg:      myCommitmentMsg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+
+	//sign l1 commitment
+	strSig1, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, isFirstCommit)
+	if err != nil {
+		return nil, err
+	}
+	myCommitmentPayload.OwnSignature = strSig1
+	dataToSave, err := json.Marshal(myCommitmentPayload)
+	if err != nil {
+		return nil, err
+	}
+	//ki o day
+	savedMessage.Data = string(dataToSave)
 	err = client.Node.Repository.Message.InsertOne(context.Background(), &savedMessage)
 	if err != nil {
 		return nil, err

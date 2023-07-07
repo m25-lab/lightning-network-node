@@ -129,12 +129,12 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("✅ *Account created successfully.* \n 💳 Your address: `%s` \n 🗝️ Your mnemonic: `%s` \n", account.AccAddress().String(), account.Mnemonic())
 				}
-			case "current_account":
+			case "me":
 				account, err := client.CurrentAccount(clientId)
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("🟢 Current account: `%s`", account.AccAddress().String())
+					msg.Text = fmt.Sprintf("🟢 Current account: `%s`", account.AccAddress().String()+"@"+client.Node.Config.LNode.External)
 				}
 			case "import_account":
 				account, err := client.ImportAccount(clientId, update.Message.CommandArguments())
@@ -176,41 +176,46 @@ func (client *Client) RunTelegramBot() error {
 				}
 				msg.Text = fmt.Sprintf("💰 *Balance:* `%d`", balance)
 			case "channel_balance":
-				//balance, err := client.ChannelBalance(clientId, update.Message.CommandArguments())
-				//if err != nil {
-				//	msg.Text = "Error: " + err.Error()
-				//} else {
-				//	msg.Text = fmt.Sprintf("Channel ID: `%s` \n My balance: `%d` \n Partner balance: `%d`", update.Message.CommandArguments(), balance.MyBalance, balance.PartnerBalance)
-				//}
-				multi := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:token:1"
-				msg.Text = fmt.Sprintf("Channel ID: `%s` \n Your balance: `%d` \n Partner balance: `%d`", multi, 4, 6)
+				balance, err := client.ChannelBalance(clientId, update.Message.CommandArguments())
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					state := ""
+					if balance.Broadcasted {
+						state = "*BROADCASTED* \n"
+					}
+					msg.Text = fmt.Sprintf("%sChannel ID: `%s` \n Your balance: `%d` \n Partner balance: `%d`", state, update.Message.CommandArguments(), balance.MyBalance, balance.PartnerBalance)
+				}
+				//multi := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:token:1"
+				//msg.Text = fmt.Sprintf("Channel ID: `%s` \n Your balance: `%d` \n Partner balance: `%d`", balance.ChannelId, balance.MyBalance, balance.PartnerBalance)
 
 			case "transfer":
-				//params := strings.Split(update.Message.CommandArguments(), " ")
-				//amount, err := strconv.ParseInt(params[1], 10, 64)
-				//if err != nil {
-				//	msg.Text = "Error: " + err.Error()
-				//}
-				//err = client.Transfer(clientId, params[0], amount)
-				//if err != nil {
-				//	msg.Text = "Error: " + err.Error()
-				//} else {
-				//	msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
-				//}
-				msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` token to `%s`", 2, "cosmos1l6xvkdgpfl23nnjhhk99fm3q8f0z49xtj5n5lt")
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				amount, err := strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				err = client.Transfer(clientId, params[0], amount)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
+				}
+				//msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` token to `%s`", 2, "cosmos1l6xvkdgpfl23nnjhhk99fm3q8f0z49xtj5n5lt")
 			case "ln_transfer":
 				params := strings.Split(update.Message.CommandArguments(), " ")
-				//amount, err := strconv.ParseInt(params[1], 10, 64)
-				//if err != nil {
-				//	msg.Text = "Error: " + err.Error()
-				//}
-				//err = client.LnTransfer(clientId, params[0], amount, nil, nil)
-				//if err != nil {
-				//	msg.Text = "Error: " + err.Error()
-				//} else {
-				//	msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
-				//}
-				msg.Text = fmt.Sprintf("⚡ *Transfer Lightning successfully.* \n Transfer `%d` token to `%s`", 1, params[0])
+				amount, err := strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				}
+				res, err := client.LnTransfer(clientId, params[0], amount, nil, nil)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s` \n "+
+						"ChannelID: `%s` \n "+
+						"CommitmentID: `%s`", amount, params[0], res.ChannelID, res.CommitmentID)
+				}
 			case "ln_transfer_multi":
 				params := strings.Split(update.Message.CommandArguments(), " ")
 				amount, err := strconv.ParseInt(params[1], 10, 64)
@@ -225,15 +230,23 @@ func (client *Client) RunTelegramBot() error {
 				}
 			case "broadcast":
 				//index: cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:token:1
-				CommitmentId := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:qV8ftmfvmEjwQ1HaSiz0usu8tJy9lCJiXREOA7mpeuE="
-				//params := strings.Split(update.Message.CommandArguments(), " ")
-				msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \nYour timelock: `%d` block(s)", CommitmentId, 100)
+				//CommitmentId := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:qV8ftmfvmEjwQ1HaSiz0usu8tJy9lCJiXREOA7mpeuE="
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				err := client.BuildAndBroadcastCommitment(clientId, params[0])
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \nYour timelock: `%d` block(s)", params[0], 100)
+				}
 			case "withdraw_timelock":
-				//params := strings.Split(update.Message.CommandArguments(), " ")
-				msg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw Message successfully.*")
-			case "withdraw_hashlock":
-				//params := strings.Split(update.Message.CommandArguments(), " ")
-				msg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw Message successfully.*")
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				err := client.BuildAndBroadcastWithdrawTimelock(clientId, params[0])
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw-Timelock Message successfully.* \n" +
+						"Please check your balance.")
+				}
 			default:
 				msg.Text = "I don't know that command"
 			}

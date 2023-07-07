@@ -52,10 +52,10 @@ func (t *Tx) prepareSignTx() error {
 	//coinType := t.privateKey.CoinType()
 	from := t.privateKey.AccAddress()
 
-	//@Todo: tmp
-	if err := t.rpcClient.AccountRetriever.EnsureExists(t.rpcClient, from); err != nil {
-		return errors.Wrap(err, "EnsureExists")
-	}
+	////@Todo: tmp
+	//if err := t.rpcClient.AccountRetriever.EnsureExists(t.rpcClient, from); err != nil {
+	//	return errors.Wrap(err, "EnsureExists")
+	//}
 
 	initNum, initSeq := t.txf.AccountNumber(), t.txf.Sequence()
 	if initNum == 0 || initSeq == 0 {

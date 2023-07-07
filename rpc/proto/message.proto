@@ -7,6 +7,7 @@ option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 service MessageService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   rpc SendSecret(SendSecretMessage) returns (SendSecretResponse);
+  rpc BroadcastNoti(BroadcastNotiMessage) returns (BroadcastNotiResponse);
 }
 
 message SendMessageRequest {
@@ -32,5 +33,17 @@ message SendSecretMessage {
 
 message SendSecretResponse {
   string secret = 1;
+  string error_code = 2;
+}
+
+message BroadcastNotiMessage {
+  string from = 1;
+  string to = 2;
+  string hash_code = 3;
+  string index = 4;
+}
+
+message BroadcastNotiResponse {
+  string response = 1;
   string error_code = 2;
 }

@@ -3,12 +3,15 @@ package message
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req *pb.SendMessageRequest, fromAccount *account.PKAccount, toAccount *account.PrivateKeySerialized, clientId string, ownAddr string) (*pb.SendMessageResponse, error) {
@@ -58,23 +61,6 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 
 	// save my commitment
 	//@Todo check signature
-	messageId := primitive.NewObjectID()
-	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
-		ID:         messageId,
-		OriginalID: messageId,
-		ChannelID:  req.ChannelId,
-		Action:     models.ExchangeCommitment,
-		Owner:      toAccount.AccAddress().String(),
-		Data:       req.Data,
-		Users:      []string{req.To, req.From},
-		IsReplied:  false,
-	})
-	if err != nil {
-		return &pb.SendMessageResponse{
-			Response:  err.Error(),
-			ErrorCode: "1006",
-		}, nil
-	}
 
 	channelClient := channel.NewChannel(*server.Client.ClientCtx)
 	commitmentMsg := channelClient.CreateCommitmentMsg(
@@ -91,7 +77,53 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		GasPrice: "0token",
 	}
 
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, toAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, toAccount, multiSigPubkey, myCommitmentPayload.IsFirstCommitment)
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+
+	myCommitmentMsg := channelClient.CreateCommitmentMsg(
+		multisigAddr,
+		toAccount.AccAddress().String(),
+		myCommitmentPayload.CoinToCreator,
+		fromAccount.AccAddress().String(),
+		myCommitmentPayload.CoinToHtlc,
+		exchangeHashcodeData.MyHashcode,
+	)
+	ownsignCommitmentMsg := channel.SignMsgRequest{
+		Msg:      myCommitmentMsg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+	ownstrSig, err := channelClient.SignMultisigTxFromOneAccount(ownsignCommitmentMsg, toAccount, multiSigPubkey, myCommitmentPayload.IsFirstCommitment)
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+	myCommitmentPayload.OwnSignature = ownstrSig
+	savedData, err := json.Marshal(myCommitmentPayload)
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+	messageId := primitive.NewObjectID()
+	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
+		ID:         messageId,
+		OriginalID: messageId,
+		ChannelID:  req.ChannelId,
+		Action:     models.ExchangeCommitment,
+		Owner:      toAccount.AccAddress().String(),
+		Data:       string(savedData),
+		Users:      []string{req.To, req.From},
+		IsReplied:  false,
+	})
 	if err != nil {
 		return &pb.SendMessageResponse{
 			Response:  err.Error(),
@@ -100,16 +132,17 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 	}
 
 	partnerCommitmentPayload, err := json.Marshal(models.CreateCommitmentData{
-		Creator:          commitmentMsg.Creator,
-		ChannelID:        commitmentMsg.ChannelID,
-		From:             commitmentMsg.From,
-		Timelock:         commitmentMsg.Timelock,
-		ToTimelockAddr:   commitmentMsg.ToTimelockAddr,
-		ToHashlockAddr:   commitmentMsg.ToHashlockAddr,
-		CoinToCreator:    commitmentMsg.CoinToCreator.Amount.Int64(),
-		CoinToHtlc:       commitmentMsg.CoinToHtlc.Amount.Int64(),
-		Hashcode:         commitmentMsg.Hashcode,
-		PartnerSignature: strSig,
+		Creator:           commitmentMsg.Creator,
+		ChannelID:         commitmentMsg.ChannelID,
+		From:              commitmentMsg.From,
+		Timelock:          commitmentMsg.Timelock,
+		ToTimelockAddr:    commitmentMsg.ToTimelockAddr,
+		ToHashlockAddr:    commitmentMsg.ToHashlockAddr,
+		CoinToCreator:     commitmentMsg.CoinToCreator.Amount.Int64(),
+		CoinToHtlc:        commitmentMsg.CoinToHtlc.Amount.Int64(),
+		Hashcode:          commitmentMsg.Hashcode,
+		PartnerSignature:  strSig,
+		IsFirstCommitment: myCommitmentPayload.IsFirstCommitment,
 	})
 	if err != nil {
 		return &pb.SendMessageResponse{
@@ -141,6 +174,23 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 				server.Client.LnTransfer(clientId, nextHop.NextHop, rCData.CoinTransfer, &myCommitmentPayload.FwdDest, &myCommitmentPayload.HashcodeDest)
 			}()
 		}
+	}
+	clientIdS, err := strconv.ParseInt(clientId, 10, 64)
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+	telMsg := tgbotapi.NewMessage(clientIdS, "")
+	telMsg.ParseMode = "Markdown"
+	telMsg.Text = fmt.Sprintf("*Balance Update* \n Channel ID: `%s` \n Partner: `%s` \n Your balance: `%d` \n Partner balance: `%d` \n Commitment ID: `%s`", myCommitmentPayload.ChannelID, req.From, myCommitmentPayload.CoinToHtlc, myCommitmentPayload.CoinToCreator, messageId.Hex())
+	_, err = server.Client.Bot.Send(telMsg)
+	if err != nil {
+		return &pb.SendMessageResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
 	}
 	return &pb.SendMessageResponse{
 		Response:  string(partnerCommitmentPayload),

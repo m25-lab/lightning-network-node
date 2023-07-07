@@ -19,6 +19,7 @@ import (
 )
 
 type ChannelBalanceStruct struct {
+	Broadcasted    bool   `json:"broadcasted"`
 	ChannelId      string `json:"channel_id"`
 	MyBalance      int64  `json:"my_balance"`
 	PartnerBalance int64  `json:"partner_balance"`
@@ -335,6 +336,7 @@ func (client *Client) ChannelBalance(clientId string, channelID string) (*Channe
 	}
 
 	return &ChannelBalanceStruct{
+		Broadcasted:    lastestCommitment.IsReplied,
 		ChannelId:      channelID,
 		MyBalance:      payload.CoinToHtlc,
 		PartnerBalance: payload.CoinToCreator,

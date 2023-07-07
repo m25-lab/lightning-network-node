@@ -2,8 +2,14 @@ package message
 
 import (
 	"context"
+	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	channelTypes "github.com/m25-lab/channel/x/channel/types"
+	"github.com/m25-lab/lightning-network-node/client"
+	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"go.mongodb.org/mongo-driver/mongo"
+	"strconv"
 	"strings"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
@@ -147,6 +153,112 @@ func (server *MessageServer) SendSecret(ctx context.Context, req *pb.SendSecretM
 
 	return &pb.SendSecretResponse{
 		Secret:    ownHashcode.MySecret,
+		ErrorCode: "",
+	}, nil
+}
+
+func (server *MessageServer) BroadcastNoti(ctx context.Context, req *pb.BroadcastNotiMessage) (*pb.BroadcastNotiResponse, error) {
+	//Thong bao len Tele
+	//khac nhau cho commit cu~/ commit / phan biet bang get secret
+	toAddress := strings.Split(req.To, "@")[0]
+
+	existToAddress, err := server.Node.Repository.Address.FindByAddress(ctx, toAddress)
+	if err != nil {
+		return &pb.BroadcastNotiResponse{
+			Response:  err.Error(),
+			ErrorCode: "1005",
+		}, nil
+	}
+	toAccount, _ := account.NewAccount().ImportAccount(existToAddress.Mnemonic)
+
+	multisigAddr := strings.Split(req.Index, ":")[0]
+	channelID := multisigAddr + ":token:1"
+
+	secretRes, err := server.Node.Repository.ExchangeHashcode.FindByPartnerHash(ctx, req.HashCode)
+
+	clientIdS, err := strconv.ParseInt(existToAddress.ClientId, 10, 64)
+	if err != nil {
+		return &pb.BroadcastNotiResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+
+	telMsg := tgbotapi.NewMessage(clientIdS, "")
+	telMsg.ParseMode = "Markdown"
+
+	//find last commitment
+	lastestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		toAddress,
+		channelID,
+		models.ExchangeCommitment,
+	)
+
+	//CURRENT
+	if secretRes.PartnerSecret == "" {
+
+		telMsg.Text = fmt.Sprintf("* Partner broadcasted a CURRENT commitment* \n Channel ID: `%s` \n Partner: `%s` \n Please check your balance.", channelID, req.From)
+		_, err = server.Client.Bot.Send(telMsg)
+		if err != nil {
+			return &pb.BroadcastNotiResponse{
+				Response:  err.Error(),
+				ErrorCode: "1006",
+			}, nil
+		}
+
+		//update last commitment
+		lastestCommitment.IsReplied = true
+		err = server.Node.Repository.Message.Update(context.Background(), lastestCommitment.ID, lastestCommitment)
+		if err != nil {
+			return &pb.BroadcastNotiResponse{
+				Response:  err.Error(),
+				ErrorCode: "1006",
+			}, nil
+		}
+		return &pb.BroadcastNotiResponse{
+			Response:  "",
+			ErrorCode: "",
+		}, nil
+	}
+	//OLD
+	// Neu cu~/ Build & broacast withdrawHashlock + thong bao len Tele
+	telMsg.Text = fmt.Sprintf("* Partner broadcasted an OLD commitment* \n Channel ID: `%s` \n Partner: `%s` \n Please check your balance. \n Withdrawing Hashlock...", channelID, req.From)
+	_, err = server.Client.Bot.Send(telMsg)
+	if err != nil {
+		return &pb.BroadcastNotiResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+
+	wdHashlockMsg := channelTypes.MsgWithdrawHashlock{
+		Creator: toAddress,
+		To:      toAddress,
+		Index:   req.Index,
+		Secret:  secretRes.PartnerSecret,
+	}
+	withdrawRequest := channel.SignMsgRequest{
+		Msg:      &wdHashlockMsg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+	_, _, err = client.BroadcastTx(server.Client.ClientCtx, toAccount, withdrawRequest)
+	if err != nil {
+		telMsg.Text = err.Error()
+	} else {
+		telMsg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw-Timelock Message successfully.* \n" +
+			"Please check your balance.")
+	}
+	_, err = server.Client.Bot.Send(telMsg)
+	if err != nil {
+		return &pb.BroadcastNotiResponse{
+			Response:  err.Error(),
+			ErrorCode: "1006",
+		}, nil
+	}
+	return &pb.BroadcastNotiResponse{
+		Response:  "",
 		ErrorCode: "",
 	}, nil
 }

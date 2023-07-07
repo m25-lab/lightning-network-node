@@ -17,18 +17,20 @@ type AddWhitelistData struct {
 }
 
 type CreateCommitmentData struct {
-	Creator          string `json:"creator"`
-	ChannelID        string `json:"channel_id"`
-	From             string `json:"from"`
-	Timelock         uint64 `json:"timelock"`
-	ToTimelockAddr   string `json:"to_timelock_addr"`
-	ToHashlockAddr   string `json:"to_hashlock_addr"`
-	CoinToCreator    int64  `json:"coin_to_creator"`
-	CoinToHtlc       int64  `json:"coin_to_htlc"`
-	Hashcode         string `json:"hashcode"`
-	PartnerSignature string `json:"partner_signature"`
-	FwdDest          string `json:"fwd_dest,omitempty"`
-	HashcodeDest     string `json:"hashcode_dest,omitempty"`
+	Creator           string `json:"creator"`
+	ChannelID         string `json:"channel_id"`
+	From              string `json:"from"`
+	Timelock          uint64 `json:"timelock"`
+	ToTimelockAddr    string `json:"to_timelock_addr"`
+	ToHashlockAddr    string `json:"to_hashlock_addr"`
+	CoinToCreator     int64  `json:"coin_to_creator"`
+	CoinToHtlc        int64  `json:"coin_to_htlc"`
+	Hashcode          string `json:"hashcode"`
+	PartnerSignature  string `json:"partner_signature"`
+	OwnSignature      string `json:"own_signature"`
+	FwdDest           string `json:"fwd_dest,omitempty"`
+	HashcodeDest      string `json:"hashcode_dest,omitempty"`
+	IsFirstCommitment bool   `json:"is_first_commitment"`
 }
 
 type OpenChannelData struct {

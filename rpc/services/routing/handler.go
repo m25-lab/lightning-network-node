@@ -341,7 +341,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		}
 		dest := nexthops[0].NextHop
 
-		err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &dest, &receiverCommit.HashcodeDest)
+		_, err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &dest, &receiverCommit.HashcodeDest)
 		if err != nil {
 			println("Trade commitment - LnTransfer:", err.Error())
 		}
@@ -463,11 +463,11 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	signSenderCommitmentMsg := channel.SignMsgRequest{
 		Msg:      senderCMsg,
 		GasLimit: 200000,
-		GasPrice: "0token", //TODO: 0token or 0stake
+		GasPrice: "0token",
 	}
 
 	//sign sender commitment in advance
-	strSigSender, err := channelClient.SignMultisigTxFromOneAccount(signSenderCommitmentMsg, toAccount, multiSigPubkey)
+	strSigSender, err := channelClient.SignMultisigTxFromOneAccount(signSenderCommitmentMsg, toAccount, multiSigPubkey, false)
 	if err != nil {
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
@@ -499,10 +499,10 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	signReceiverCommitmentMsg := channel.SignMsgRequest{
 		Msg:      receiverCMsg,
 		GasLimit: 200000,
-		GasPrice: "0token", //TODO: 0token or 0stake
+		GasPrice: "0token",
 	}
 
-	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, toAccount, multiSigPubkey)
+	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, toAccount, multiSigPubkey, false)
 	if err != nil {
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
@@ -559,7 +559,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 
 		}()
 	} else {
-		//TODO: to phase reveal C's secret, call processInvoiceSecret to B
+		//thangcq: to phase reveal C's secret, call processInvoiceSecret to B
 	}
 
 	return &pb.FwdMessageResponse{

@@ -50,7 +50,7 @@ func (server *MessageServer) ValidateOpenChannel(ctx context.Context, req *pb.Se
 
 	//@TODO: check parter sig corret
 
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signOpenChannelMsg, toAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signOpenChannelMsg, toAccount, multiSigPubkey, false)
 	if err != nil {
 		return &pb.SendMessageResponse{
 			Response:  err.Error(),

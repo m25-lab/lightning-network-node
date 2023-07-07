@@ -46,11 +46,11 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	signCommitmentMsg := channel.SignMsgRequest{
 		Msg:      senderCommitmentMsg,
 		GasLimit: 200000,
-		GasPrice: "0token", //TODO: 0token or 0stake
+		GasPrice: "0token",
 	}
 
 	//sign l1 sender commitment
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		GasPrice: "0token",
 	}
 
-	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, accountPacked.fromAccount, multiSigPubkey)
+	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
 		return nil, err
 	}

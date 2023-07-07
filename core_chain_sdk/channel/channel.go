@@ -32,14 +32,20 @@ func NewChannel(rpcClient client.Context) *Channel {
 
 func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	account *account.PrivateKeySerialized,
-	multiSigPubkey cryptoTypes.PubKey) (string, error) {
+	multiSigPubkey cryptoTypes.PubKey,
+	isFirstCommit bool) (string, error) {
 
 	err := req.Msg.ValidateBasic()
 	if err != nil {
 		return "", err
 	}
 
-	newTx := common.NewMultisigTxBuilder(cn.rpcClient, account, req.GasLimit, req.GasPrice, 0, 2)
+	from := types.AccAddress(multiSigPubkey.Address())
+	accNum, accSeq, err := cn.rpcClient.AccountRetriever.GetAccountNumberSequence(cn.rpcClient, from)
+	if isFirstCommit {
+		accSeq += 1
+	}
+	newTx := common.NewMultisigTxBuilder(cn.rpcClient, account, req.GasLimit, req.GasPrice, accSeq, accNum)
 	txBuilder, err := newTx.BuildUnsignedTx(req.Msg)
 
 	if err != nil {
@@ -175,11 +181,11 @@ func (cn *Channel) CreateOpenChannelMsg(
 		PartB:        partB,
 		CoinA: &types.Coin{
 			Denom:  "token",
-			Amount: types.NewInt(coinA),
+			Amount: types.NewInt(coinB),
 		},
 		CoinB: &types.Coin{
 			Denom:  "token",
-			Amount: types.NewInt(coinB),
+			Amount: types.NewInt(coinA),
 		},
 	}
 }

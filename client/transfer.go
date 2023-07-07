@@ -24,21 +24,26 @@ type AccountPacked struct {
 	toEndpoint  string
 }
 
+type LnTransferRes struct {
+	ChannelID    string
+	CommitmentID string
+}
+
 func (client *Client) LnTransfer(
 	clientId string,
 	to string,
 	amount int64,
 	fwdDest *string,
 	hashcodeDest *string,
-) error {
+) (*LnTransferRes, error) {
 	//create account packed
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), to)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
 	toEndpoint := strings.Split(to, "@")[1]
@@ -52,12 +57,12 @@ func (client *Client) LnTransfer(
 	multisigAddr, _, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 	multisigAddrBalance, err := client.Balance(multisigAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if multisigAddrBalance == 0 {
 		err = client.Transfer(clientId, multisigAddr, 1)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -76,13 +81,14 @@ func (client *Client) LnTransfer(
 	if err != nil && err.Error() == "rpc error: code = NotFound desc = not found" {
 		isOpenChannel = false
 	}
+	println("isOpenChannel :", isOpenChannel)
 	if !isOpenChannel {
 		fromBalance, err := client.Balance(fromAccount.AccAddress().String())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if fromBalance < amount {
-			return fmt.Errorf("not enough balance")
+			return nil, fmt.Errorf("not enough balance")
 		}
 	} else {
 		lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
@@ -92,18 +98,18 @@ func (client *Client) LnTransfer(
 			models.ExchangeCommitment,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		payload := models.CreateCommitmentData{}
 		err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		fromAmount = payload.CoinToHtlc - amount
 		if fromAmount < 0 {
-			return fmt.Errorf("not enough balance in channel")
+			return nil, fmt.Errorf("not enough balance in channel")
 		}
 		toAmount = payload.CoinToCreator + amount
 
@@ -115,39 +121,42 @@ func (client *Client) LnTransfer(
 			models.ExchangeHashcode,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount, fwdDest, hashcodeDest)
+	savedMesssage, err := client.ExchangeCommitment(clientId, accountPacked, fromAmount, toAmount, fwdDest, hashcodeDest, !isOpenChannel)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//open channel
 	if !isOpenChannel {
 		err = client.OpenChannel(clientId, accountPacked)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		_, err = client.ExchangeSecret(clientId, accountPacked, hashcodePayload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &LnTransferRes{
+		ChannelID:    multisigAddr + ":token:1",
+		CommitmentID: savedMesssage.ID.Hex(),
+	}, nil
 }
 
 func (client *Client) Transfer(clientId string, toAddress string, value int64) error {

@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	signingTypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
-	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
@@ -47,7 +44,7 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 		GasPrice: "0token",
 	}
 
-	strSig, err := channelClient.SignMultisigTxFromOneAccount(signOpenChannelMsg, accountPacked.fromAccount, multiSigPubkey)
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signOpenChannelMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
 		return err
 	}
@@ -85,35 +82,41 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 
 	//@Todo check sigature
 
-	signList := make([][]signingTypes.SignatureV2, 0)
-	signByte1, err := common.SignatureJsonDecoder(client.ClientCtx.TxConfig, strSig)
-	if err != nil {
-		return err
-	}
-
-	signByte2, err := common.SignatureJsonDecoder(client.ClientCtx.TxConfig, partnerSig)
-	if err != nil {
-		return err
-	}
-	signList = append(signList, signByte2)
-	signList = append(signList, signByte1)
-
-	newTx := common.NewMultisigTxBuilder(*client.ClientCtx, nil, signOpenChannelMsg.GasLimit, signOpenChannelMsg.GasPrice, 0, 2)
-	txBuilderMultiSign, err := newTx.BuildUnsignedTx(signOpenChannelMsg.Msg)
-	if err != nil {
-		return err
-	}
-
-	err = newTx.GenerateMultisig(txBuilderMultiSign, multiSigPubkey, signList)
-	if err != nil {
-		return err
-	}
-	txJson, err := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilderMultiSign)
-	if err != nil {
-		return err
-	}
-
-	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
+	//signList := make([][]signingTypes.SignatureV2, 0)
+	//signByte1, err := common.SignatureJsonDecoder(client.ClientCtx.TxConfig, strSig)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//signByte2, err := common.SignatureJsonDecoder(client.ClientCtx.TxConfig, partnerSig)
+	//if err != nil {
+	//	return err
+	//}
+	//signList = append(signList, signByte2)
+	//signList = append(signList, signByte1)
+	//fmt.Println(signList)
+	//
+	//newTx := common.NewMultisigTxBuilder(*client.ClientCtx, nil, signOpenChannelMsg.GasLimit, signOpenChannelMsg.GasPrice, 0, 2)
+	//txBuilderMultiSign, err := newTx.BuildUnsignedTx(signOpenChannelMsg.Msg)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//err = newTx.GenerateMultisig(txBuilderMultiSign, multiSigPubkey, uint32(118), signList)
+	//if err != nil {
+	//	return err
+	//}
+	//txJson, err := common.TxBuilderJsonEncoder(client.ClientCtx.TxConfig, txBuilderMultiSign)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println("txJson:", txJson)
+	//txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println("txByte:", txByte)
+	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, strSig, partnerSig, signOpenChannelMsg)
 	if err != nil {
 		return err
 	}

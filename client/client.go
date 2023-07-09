@@ -54,7 +54,7 @@ func New(node *node.LightningNode) (*Client, error) {
 	//github.com/cosmos/cosmos-sdk/simapp/app.go
 	//github.com/evmos/ethermint@v0.19.0/app/app.go -> selected
 	encodingConfig := encoding.MakeConfig(app.ModuleBasics)
-	rpcHttp, err := sdkClient.NewClientFromNode("http://localhost:26657")
+	rpcHttp, err := sdkClient.NewClientFromNode(node.Config.Corechain.Endpoint) //"http://localhost:26657")
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func New(node *node.LightningNode) (*Client, error) {
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
 		WithAccountRetriever(ar).
-		WithChainID("channel").
+		WithChainID(node.Config.Node.ChainId). //"channel").
 		WithBroadcastMode(flags.BroadcastSync)
 
 	return &Client{

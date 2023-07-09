@@ -7,6 +7,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/database/repository"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -83,4 +84,23 @@ func (mongo *RoutingRepoImplMongo) FindByDestAndBroadcastId(ctx context.Context,
 	}
 
 	return &nextHop, nil
+}
+
+func (mongo *RoutingRepoImplMongo) DeletedRoutingByNextHop(ctx context.Context, nextHop string, owner string) error {
+	_, err := mongo.Db.Collection(Address).DeleteMany(ctx, bson.M{
+		"owner":    owner,
+		"next_hop": nextHop,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (mongo *RoutingRepoImplMongo) UpdateRoute(ctx context.Context, id primitive.ObjectID, routing *models.Routing) error {
+	if _, err := mongo.Db.Collection(Routing).UpdateByID(ctx, id, routing); err != nil {
+		return err
+	}
+	return nil
 }

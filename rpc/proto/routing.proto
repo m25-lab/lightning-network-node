@@ -7,14 +7,17 @@ option go_package = "github.com/m25-lab/lightning-network-node/node/rpc/pb";
 service RoutingService {
   rpc RREQ(RREQRequest) returns (RoutingBaseResponse) {} // phase discovery
   rpc RREP(RREPRequest) returns (RoutingBaseResponse) {} // phase reply
-  //   rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
+  rpc RERR(RERRRequest) returns (RoutingBaseResponse) {} // maintain route
 
   rpc RequestInvoice(IREQMessage) returns (IREPMessage);
   rpc ProcessFwdMessage(FwdMessage) returns (FwdMessageResponse);
   rpc ProcessInvoiceSecret(InvoiceSecretMessage) returns (RoutingBaseResponse);
 }
 
-message RoutingBaseResponse { RoutingErrorCode ErrorCode = 1; }
+message RoutingBaseResponse {
+  RoutingErrorCode ErrorCode = 1;
+  string Response = 2;
+}
 
 message RREQRequest {
   string SourceAddress = 1;
@@ -22,6 +25,7 @@ message RREQRequest {
   string BroadcastID = 3; // hash invoice
   string FromAddress = 4;
   string ToAddress = 5;
+  string Data = 6;
 }
 
 message RREPRequest {
@@ -30,6 +34,15 @@ message RREPRequest {
   string BroadcastID = 3; // hash invoice
   string FromAddress = 4;
   string ToAddress = 5;
+  string Data = 6;
+}
+
+message RERRRequest {
+  string DestinationAddress = 1;
+  string FromAddress = 2;
+  string ToAddress = 3;
+  string ErrorAddress = 4;
+  string Message = 5;
 }
 
 enum RoutingErrorCode {
@@ -44,6 +57,9 @@ enum RoutingErrorCode {
   VALIDATE_INVOICE_SECRET = 8;
   INSERT_SECRET = 9;
   DESTINATION_ADDRESS_FIND_BY_ADDRESS = 10;
+  INSERT_ROUTING_ERROR = 11;
+  ROUTE_NOT_EXISTED = 12;
+  NOT_ENOUGH_REWARD = 13;
   OK = 999;
 }
 

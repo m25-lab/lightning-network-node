@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type RoutingServiceClient interface {
 	RREQ(ctx context.Context, in *RREQRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
 	RREP(ctx context.Context, in *RREPRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
+	RERR(ctx context.Context, in *RERRRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
 	RequestInvoice(ctx context.Context, in *IREQMessage, opts ...grpc.CallOption) (*IREPMessage, error)
 	ProcessFwdMessage(ctx context.Context, in *FwdMessage, opts ...grpc.CallOption) (*FwdMessageResponse, error)
 	ProcessInvoiceSecret(ctx context.Context, in *InvoiceSecretMessage, opts ...grpc.CallOption) (*RoutingBaseResponse, error)
@@ -49,6 +50,15 @@ func (c *routingServiceClient) RREQ(ctx context.Context, in *RREQRequest, opts .
 func (c *routingServiceClient) RREP(ctx context.Context, in *RREPRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error) {
 	out := new(RoutingBaseResponse)
 	err := c.cc.Invoke(ctx, "/channel.RoutingService/RREP", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *routingServiceClient) RERR(ctx context.Context, in *RERRRequest, opts ...grpc.CallOption) (*RoutingBaseResponse, error) {
+	out := new(RoutingBaseResponse)
+	err := c.cc.Invoke(ctx, "/channel.RoutingService/RERR", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +98,7 @@ func (c *routingServiceClient) ProcessInvoiceSecret(ctx context.Context, in *Inv
 type RoutingServiceServer interface {
 	RREQ(context.Context, *RREQRequest) (*RoutingBaseResponse, error)
 	RREP(context.Context, *RREPRequest) (*RoutingBaseResponse, error)
+	RERR(context.Context, *RERRRequest) (*RoutingBaseResponse, error)
 	RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error)
 	ProcessFwdMessage(context.Context, *FwdMessage) (*FwdMessageResponse, error)
 	ProcessInvoiceSecret(context.Context, *InvoiceSecretMessage) (*RoutingBaseResponse, error)
@@ -103,6 +114,9 @@ func (UnimplementedRoutingServiceServer) RREQ(context.Context, *RREQRequest) (*R
 }
 func (UnimplementedRoutingServiceServer) RREP(context.Context, *RREPRequest) (*RoutingBaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RREP not implemented")
+}
+func (UnimplementedRoutingServiceServer) RERR(context.Context, *RERRRequest) (*RoutingBaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RERR not implemented")
 }
 func (UnimplementedRoutingServiceServer) RequestInvoice(context.Context, *IREQMessage) (*IREPMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
@@ -158,6 +172,24 @@ func _RoutingService_RREP_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RoutingServiceServer).RREP(ctx, req.(*RREPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoutingService_RERR_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RERRRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoutingServiceServer).RERR(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.RoutingService/RERR",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoutingServiceServer).RERR(ctx, req.(*RERRRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -230,6 +262,10 @@ var RoutingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RREP",
 			Handler:    _RoutingService_RREP_Handler,
+		},
+		{
+			MethodName: "RERR",
+			Handler:    _RoutingService_RERR_Handler,
 		},
 		{
 			MethodName: "RequestInvoice",

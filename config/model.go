@@ -30,7 +30,8 @@ type Telegram struct {
 }
 
 type LNode struct {
-	External string
+	External       string
+	TimeoutRequest int64
 }
 
 type Kafka struct {

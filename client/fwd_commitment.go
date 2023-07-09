@@ -59,14 +59,14 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	msg := models.SenderCommitment{
 		Creator:          senderCommitmentMsg.Creator,
 		From:             senderCommitmentMsg.From,
-		Channelid:        senderCommitmentMsg.Channelid,
-		CoinToSender:     senderCommitmentMsg.Cointosender.Amount.Int64(),
-		CoinToHTLC:       senderCommitmentMsg.Cointohtlc.Amount.Int64(),
-		HashcodeHTLC:     senderCommitmentMsg.Hashcodehtlc,
-		TimelockHTLC:     senderCommitmentMsg.Timelockhtlc,
-		CoinTransfer:     senderCommitmentMsg.Cointransfer.Amount.Int64(),
-		HashcodeDest:     senderCommitmentMsg.Hashcodedest,
-		TimelockReceiver: senderCommitmentMsg.Timelockreceiver,
+		Channelid:        senderCommitmentMsg.ChannelID,
+		CoinToSender:     senderCommitmentMsg.CoinToSender.Amount.Int64(),
+		CoinToHTLC:       senderCommitmentMsg.CoinToHtlc.Amount.Int64(),
+		HashcodeHTLC:     senderCommitmentMsg.HashcodeHtlc,
+		TimelockHTLC:     senderCommitmentMsg.TimelockHtlc,
+		CoinTransfer:     senderCommitmentMsg.CoinTransfer.Amount.Int64(),
+		HashcodeDest:     senderCommitmentMsg.HashcodeDest,
+		TimelockReceiver: senderCommitmentMsg.TimelockReceiver,
 		Multisig:         senderCommitmentMsg.Multisig,
 	}
 
@@ -97,8 +97,6 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	if err != nil {
 		return nil, err
 	}
-
-	//TODO: validate sig response.PartnerSig, myCommitmentPayload
 
 	//Build and sign receiver commit
 	receiverCMsg := channelClient.CreateReceiverCommitmentMsg(

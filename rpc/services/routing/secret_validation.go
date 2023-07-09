@@ -10,7 +10,8 @@ import (
 )
 
 func (server *RoutingServer) ValidateInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*models.ReceiverCommitment, error) {
-	rCommit, err := server.Client.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, req.Hashcode)
+
+	rCommit, err := server.Client.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, "asd", req.Hashcode)
 	if err != nil {
 		return nil, err
 	}

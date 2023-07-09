@@ -229,8 +229,6 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
 			case "broadcast":
-				//index: cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:token:1
-				//CommitmentId := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:qV8ftmfvmEjwQ1HaSiz0usu8tJy9lCJiXREOA7mpeuE="
 				params := strings.Split(update.Message.CommandArguments(), " ")
 				err := client.BuildAndBroadcastCommitment(clientId, params[0])
 				if err != nil {

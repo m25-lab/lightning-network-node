@@ -353,8 +353,6 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 }
 
 func (server *RoutingServer) RequestInvoice(ctx context.Context, req *pb.IREQMessage) (*pb.IREPMessage, error) {
-	//TODO: check to address is active
-
 	secret, err := common.RandomSecret()
 	if err != nil {
 		println("RandomSecret:", err.Error())
@@ -363,13 +361,18 @@ func (server *RoutingServer) RequestInvoice(ctx context.Context, req *pb.IREQMes
 		}, nil
 	}
 	hashcode := common.ToHashCode(secret)
-	server.Node.Repository.Invoice.InsertInvoice(ctx, &models.InvoiceData{
+	err = server.Node.Repository.Invoice.InsertInvoice(ctx, &models.InvoiceData{
 		Amount: req.Amount,
 		From:   req.From,
 		To:     req.To,
 		Hash:   hashcode,
 		Secret: secret,
 	})
+	if err != nil {
+		return &pb.IREPMessage{
+			ErrorCode: err.Error(),
+		}, nil
+	}
 	return &pb.IREPMessage{
 		From:      req.From,
 		To:        req.To,
@@ -513,14 +516,14 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	partnerCommitmentPayload, err := json.Marshal(models.ReceiverCommitment{
 		Creator:        receiverCMsg.Creator,
 		From:           receiverCMsg.From,
-		ChannelID:      receiverCMsg.Channelid,
-		CoinToReceiver: receiverCMsg.Cointoreceiver.Amount.Int64(),
-		CoinToHTLC:     receiverCMsg.Cointohtlc.Amount.Int64(),
-		HashcodeHTLC:   receiverCMsg.Hashcodehtlc,
-		TimelockHTLC:   receiverCMsg.Timelockhtlc,
-		CoinTransfer:   receiverCMsg.Cointransfer.Amount.Int64(),
-		HashcodeDest:   receiverCMsg.Hashcodedest,
-		TimelockSender: receiverCMsg.Timelocksender,
+		ChannelID:      receiverCMsg.ChannelID,
+		CoinToReceiver: receiverCMsg.CoinToReceiver.Amount.Int64(),
+		CoinToHTLC:     receiverCMsg.CoinToHtlc.Amount.Int64(),
+		HashcodeHTLC:   receiverCMsg.HashcodeHtlc,
+		TimelockHTLC:   receiverCMsg.TimelockHtlc,
+		CoinTransfer:   receiverCMsg.CoinTransfer.Amount.Int64(),
+		HashcodeDest:   receiverCMsg.HashcodeDest,
+		TimelockSender: receiverCMsg.TimelockSender,
 		Multisig:       receiverCMsg.Multisig,
 	})
 
@@ -533,7 +536,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	//find invoice in db, exist => is Dest
 
 	needNext := false
-	_, err = server.Node.Repository.Invoice.FindByHash(ctx, req.HashcodeDest)
+	_, err = server.Node.Repository.Invoice.FindByHash(ctx, toAccount.AccAddress().String()+"@"+server.Node.Config.LNode.External, req.HashcodeDest)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			needNext = true

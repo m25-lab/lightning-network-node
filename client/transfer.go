@@ -216,11 +216,13 @@ func (client *Client) LnTransferMulti(
 	if err != nil {
 		return err
 	}
-	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(to))
+
+	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(to, "@")[1]))
 	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
 	invoiceReponse, err := rpcClient.RequestInvoice(context.Background(), &pb.IREQMessage{
 		Amount: amount,
 		From:   selfAddress,
+		To:     to,
 	})
 
 	if err != nil {
@@ -232,7 +234,7 @@ func (client *Client) LnTransferMulti(
 
 	//TODO: Implement Routing with to and hash
 
-	//get next hop,trust routing
+	//get next hop
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceReponse.Hash)
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
 
@@ -287,7 +289,9 @@ func (client *Client) LnTransferMulti(
 	if err != nil {
 		return err
 	}
-
+	if lastestCommitment.IsReplied {
+		return errors.New("channel with " + nextHop.NextHop + " broadcasted.")
+	}
 	payload := models.CreateCommitmentData{}
 	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
 	if err != nil {

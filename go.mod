@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/dungtt-astra/channel v0.0.3
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/evmos/ethermint v0.19.3
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1

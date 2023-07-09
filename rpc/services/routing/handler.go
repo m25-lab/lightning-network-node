@@ -376,24 +376,17 @@ func extractAdress(address string) (walletAddress, endpoint string) {
 
 func ExtractDataFromRREQ(dataString string) *models.RREQData {
 	var data models.RREQData
-	byte, err := json.Marshal(dataString)
+	err := json.Unmarshal([]byte(dataString), &data)
 	if err != nil {
 		return nil
 	}
-	err = json.Unmarshal(byte, &data)
-	if err != nil {
-		return nil
-	}
+
 	return &data
 }
 
 func ExtractDataFromRREP(dataString string) *models.RREPData {
 	var data models.RREPData
-	byte, err := json.Marshal(dataString)
-	if err != nil {
-		return nil
-	}
-	err = json.Unmarshal(byte, &data)
+	err := json.Unmarshal([]byte(dataString), &data)
 	if err != nil {
 		return nil
 	}

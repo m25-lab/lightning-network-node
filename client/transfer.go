@@ -232,7 +232,7 @@ func (client *Client) LnTransferMulti(
 		return errors.New(invoiceReponse.ErrorCode)
 	}
 
-	//TODO: Implement Routing with to and hash
+	//thangcq: begin routing here
 
 	//get next hop
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceReponse.Hash)

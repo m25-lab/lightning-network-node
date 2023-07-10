@@ -19,10 +19,10 @@ func (mongo *FwdSecrettRepoImplMongo) InsertSecret(ctx context.Context, input *m
 	return nil
 }
 
-func (mongo *FwdSecrettRepoImplMongo) FindByDestHash(ctx context.Context, hash string) (*models.FwdSecret, error) {
+func (mongo *FwdSecrettRepoImplMongo) FindByDestHash(ctx context.Context, owner string, hash string) (*models.FwdSecret, error) {
 	result := models.FwdSecret{}
 
-	response := mongo.Db.Collection(FwdSecret).FindOne(ctx, bson.M{"hashcode_dest": hash})
+	response := mongo.Db.Collection(FwdSecret).FindOne(ctx, bson.M{"hashcode_dest": hash, "owner": owner})
 	if err := response.Decode(&result); err != nil {
 		return nil, err
 	}

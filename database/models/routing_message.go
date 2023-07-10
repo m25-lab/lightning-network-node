@@ -53,6 +53,7 @@ type FwdMessage struct {
 }
 
 type FwdSecret struct {
+	Owner        string `bson:"owner" json:"owner"`
 	HashcodeDest string `bson:"hashcode_dest" json:"hashcode_dest"`
 	Secret       string `bson:"secret" json:"secret"`
 }

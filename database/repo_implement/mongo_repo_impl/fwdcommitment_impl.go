@@ -19,10 +19,10 @@ func (mongo *FwdCommitmentRepoImplMongo) InsertFwdMessage(ctx context.Context, s
 	return nil
 }
 
-func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, hash string) (*models.FwdMessage, error) {
+func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, owner string, hash string) (*models.FwdMessage, error) {
 	rcC := models.FwdMessage{}
 
-	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.ReceiverCommit, "hash": hash})
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.ReceiverCommit, "hash": hash, "to": owner})
 	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}
@@ -30,10 +30,10 @@ func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx contex
 	return &rcC, nil
 }
 
-func (mongo *FwdCommitmentRepoImplMongo) FindSenderCommitByDestHash(ctx context.Context, hash string) (*models.FwdMessage, error) {
+func (mongo *FwdCommitmentRepoImplMongo) FindSenderCommitByDestHash(ctx context.Context, owner string, hash string) (*models.FwdMessage, error) {
 	rcC := models.FwdMessage{}
 
-	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.SenderCommit, "hash": hash})
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.SenderCommit, "hash": hash, "to": owner})
 	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}

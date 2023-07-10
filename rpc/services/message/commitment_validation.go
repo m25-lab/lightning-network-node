@@ -160,7 +160,7 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 					return
 				}
 				//find receivercommit
-				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, myCommitmentPayload.HashcodeDest)
+				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, ownAddr, myCommitmentPayload.HashcodeDest)
 				if err != nil {
 					println("Fwd Commitment: rC-FindReceiverCommitByDestHash:", err.Error())
 					return

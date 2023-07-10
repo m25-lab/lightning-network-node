@@ -59,14 +59,14 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	msg := models.SenderCommitment{
 		Creator:          senderCommitmentMsg.Creator,
 		From:             senderCommitmentMsg.From,
-		Channelid:        senderCommitmentMsg.Channelid,
-		CoinToSender:     senderCommitmentMsg.Cointosender.Amount.Int64(),
-		CoinToHTLC:       senderCommitmentMsg.Cointohtlc.Amount.Int64(),
-		HashcodeHTLC:     senderCommitmentMsg.Hashcodehtlc,
-		TimelockHTLC:     senderCommitmentMsg.Timelockhtlc,
-		CoinTransfer:     senderCommitmentMsg.Cointransfer.Amount.Int64(),
-		HashcodeDest:     senderCommitmentMsg.Hashcodedest,
-		TimelockReceiver: senderCommitmentMsg.Timelockreceiver,
+		Channelid:        senderCommitmentMsg.ChannelID,
+		CoinToSender:     senderCommitmentMsg.CoinToSender.Amount.Int64(),
+		CoinToHTLC:       senderCommitmentMsg.CoinToHtlc.Amount.Int64(),
+		HashcodeHTLC:     senderCommitmentMsg.HashcodeHtlc,
+		TimelockHTLC:     senderCommitmentMsg.TimelockHtlc,
+		CoinTransfer:     senderCommitmentMsg.CoinTransfer.Amount.Int64(),
+		HashcodeDest:     senderCommitmentMsg.HashcodeDest,
+		TimelockReceiver: senderCommitmentMsg.TimelockReceiver,
 		Multisig:         senderCommitmentMsg.Multisig,
 	}
 
@@ -77,7 +77,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	//send rpc (input: sendercommit with sig; output: receivercommit)
 
 	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(accountPacked.toEndpoint))
-	reponse, err := rpcClient.ProcessFwdMessage(context.Background(), &pb.FwdMessage{
+	response, err := rpcClient.ProcessFwdMessage(context.Background(), &pb.FwdMessage{
 		Action:       models.SenderCommit,
 		Data:         string(partnerCommitmentPayload),
 		From:         accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
@@ -89,16 +89,14 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		return nil, err
 	}
 
-	if reponse.ErrorCode != "" {
-		return nil, errors.New(reponse.ErrorCode + ":" + reponse.Response)
+	if response.ErrorCode != "" {
+		return nil, errors.New(response.ErrorCode + ":" + response.Response)
 	}
 	myCommitmentPayload := models.ReceiverCommitment{}
-	err = json.Unmarshal([]byte(reponse.Response), &myCommitmentPayload)
+	err = json.Unmarshal([]byte(response.Response), &myCommitmentPayload)
 	if err != nil {
 		return nil, err
 	}
-
-	//TODO: validate sig response.PartnerSig, myCommitmentPayload
 
 	//Build and sign receiver commit
 	receiverCMsg := channelClient.CreateReceiverCommitmentMsg(
@@ -124,9 +122,9 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 
 	err = client.Node.Repository.FwdCommitment.InsertFwdMessage(context.Background(), &models.FwdMessage{
 		Action:       models.ReceiverCommit,
-		PartnerSig:   reponse.PartnerSig,
+		PartnerSig:   response.PartnerSig,
 		OwnSig:       strSigReceiver,
-		Data:         reponse.Response,
+		Data:         response.Response,
 		From:         accountPacked.toAccount.AccAddress().String() + "@" + accountPacked.toEndpoint,
 		To:           accountPacked.fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
 		HashcodeDest: myCommitmentPayload.HashcodeDest,

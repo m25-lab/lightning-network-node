@@ -10,7 +10,8 @@ import (
 )
 
 func (server *RoutingServer) ValidateInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*models.ReceiverCommitment, error) {
-	rCommit, err := server.Client.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, req.Hashcode)
+
+	rCommit, err := server.Client.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, req.To, req.Hashcode)
 	if err != nil {
 		return nil, err
 	}
@@ -19,6 +20,7 @@ func (server *RoutingServer) ValidateInvoiceSecret(ctx context.Context, req *pb.
 	if newHash != req.Hashcode {
 		return nil, errors.New("secret not match hash")
 	}
+
 	receiverCommit := models.ReceiverCommitment{}
 	err = json.Unmarshal([]byte(rCommit.Data), &receiverCommit)
 	if err != nil {

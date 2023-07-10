@@ -80,9 +80,11 @@ message IREPMessage {
 }
 
 message InvoiceSecretMessage {
-  string hashcode = 1;
-  string secret = 2;
-  string dest = 3;
+  string from = 1;
+  string to = 2;
+  string hashcode = 3;
+  string secret = 4;
+  string dest = 5;
 }
 
 message FwdMessageResponse {

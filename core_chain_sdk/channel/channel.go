@@ -8,14 +8,12 @@ import (
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	channelTypes2 "github.com/dungtt-astra/channel/x/channel/types"
 	channelTypes "github.com/m25-lab/channel/x/channel/types"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/pkg/errors"
 )
 
-// TODO: replace channelType2
 type Channel struct {
 	rpcClient client.Context
 }
@@ -106,28 +104,28 @@ func (cn *Channel) CreateSenderCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
-) *channelTypes2.MsgSendercommit {
-	return &channelTypes2.MsgSendercommit{
+) *channelTypes.MsgSendercommit {
+	return &channelTypes.MsgSendercommit{
 		Creator:   multisigAddr,
-		From:      fromAddr, //TODO: sender or multisig?
-		Channelid: multisigAddr + ":token:1",
-		Cointosender: &types.Coin{
+		From:      fromAddr,
+		ChannelID: multisigAddr + ":token:1",
+		CoinToSender: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinToOriginal),
 		},
-		Cointohtlc: &types.Coin{
+		CoinToHtlc: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinToHtlc),
 		},
-		Hashcodehtlc: hashCode,
-		Timelockhtlc: "100",
-		Cointransfer: &types.Coin{
+		HashcodeHtlc: hashCode,
+		TimelockHtlc: "100",
+		CoinTransfer: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinTransfer),
 		},
-		Hashcodedest:     hashCodeDest,
-		Timelockreceiver: "100",
-		Timelocksender:   "10", //TODO: get current block height?
+		HashcodeDest:     hashCodeDest,
+		TimelockReceiver: "100",
+		TimelockSender:   "10", //thangcq
 		Multisig:         multisigAddr,
 	}
 }
@@ -140,29 +138,28 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
-) *channelTypes2.MsgReceivercommit {
-	return &channelTypes2.MsgReceivercommit{
+) *channelTypes.MsgReceivercommit {
+	return &channelTypes.MsgReceivercommit{
 		Creator:   multisigAddr,
 		From:      fromAddr,
-		Channelid: multisigAddr + ":token:1",
-		Cointoreceiver: &types.Coin{
+		ChannelID: multisigAddr + ":token:1",
+		CoinToReceiver: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinToOriginal),
 		},
-		Cointohtlc: &types.Coin{
+		CoinToHtlc: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinToHtlc),
 		},
-		Hashcodehtlc: hashCode,
-		Timelockhtlc: "100",
-		Cointransfer: &types.Coin{
+		HashcodeHtlc: hashCode,
+		TimelockHtlc: "100",
+		CoinTransfer: &types.Coin{
 			Denom:  "token",
 			Amount: types.NewInt(coinTransfer),
 		},
-		Hashcodedest:   hashCodeDest,
-		Timelocksender: "100",
-		//Timelockreceiver:   "10", //TODO: Missing timelock receiver?
-		Multisig: multisigAddr,
+		HashcodeDest:   hashCodeDest,
+		TimelockSender: "100",
+		Multisig:       multisigAddr,
 	}
 }
 

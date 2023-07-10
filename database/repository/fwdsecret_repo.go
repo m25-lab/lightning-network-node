@@ -7,6 +7,6 @@ import (
 
 type FwdSecretRepo interface {
 	InsertSecret(ctx context.Context, input *models.FwdSecret) error
-	FindByDestHash(ctx context.Context, hash string) (*models.FwdSecret, error)
+	FindByDestHash(ctx context.Context, owner string, hash string) (*models.FwdSecret, error)
 	DeleteByDestHash(ctx context.Context, hash string) error
 }

@@ -19,10 +19,10 @@ func (mongo *InvoiceRepoImplMongo) InsertInvoice(ctx context.Context, input *mod
 	return nil
 }
 
-func (mongo *InvoiceRepoImplMongo) FindByHash(ctx context.Context, hash string) (*models.InvoiceData, error) {
+func (mongo *InvoiceRepoImplMongo) FindByHash(ctx context.Context, owner string, hash string) (*models.InvoiceData, error) {
 	result := models.InvoiceData{}
 
-	response := mongo.Db.Collection(Invoice).FindOne(ctx, bson.M{"hash": hash})
+	response := mongo.Db.Collection(Invoice).FindOne(ctx, bson.M{"hash": hash, "to": owner})
 	if err := response.Decode(&result); err != nil {
 		return nil, err
 	}

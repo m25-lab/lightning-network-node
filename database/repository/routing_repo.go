@@ -10,7 +10,7 @@ import (
 type RoutingRepo interface {
 	InsertOne(context.Context, *models.Routing) error
 	FindRouting(context.Context, models.Routing) ([]*models.Routing, error)
-	FindByDestAndBroadcastId(context.Context, string, string, string) (*models.Routing, error)
+	FindByDestAndBroadcastId(ctx context.Context, owner string, destAddr string, brId string) (*models.Routing, error)
 	DeletedRoutingByNextHop(context.Context, string, string) error
 	UpdateRoute(context.Context, primitive.ObjectID, *models.Routing) error
 }

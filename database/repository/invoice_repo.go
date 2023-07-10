@@ -7,5 +7,5 @@ import (
 
 type InvoiceRepo interface {
 	InsertInvoice(ctx context.Context, input *models.InvoiceData) error
-	FindByHash(ctx context.Context, hash string) (*models.InvoiceData, error)
+	FindByHash(ctx context.Context, owner string, hash string) (*models.InvoiceData, error)
 }

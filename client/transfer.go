@@ -210,32 +210,30 @@ func (client *Client) LnTransferMulti(
 	amount int64,
 	fwdDest *string,
 	hashcodeDest *string,
+	isSkipGetInvoice bool,
 ) error {
 	//request invoice
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
 		return err
 	}
-
-	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(to, "@")[1]))
 	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
-	invoiceReponse, err := rpcClient.RequestInvoice(context.Background(), &pb.IREQMessage{
-		Amount: amount,
-		From:   selfAddress,
-		To:     to,
-	})
 
+	var invoiceResponse *pb.IREPMessage
+	if !isSkipGetInvoice {
+		invoiceResponse, err = client.GetInvoice(fromAccount, amount, to)
+		if err != nil {
+			return err
+		}
+	}
+
+	// try get next hop
+	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceResponse.Hash)
 	if err != nil {
-		return err
-	}
-	if invoiceReponse.ErrorCode != "" {
-		return errors.New(invoiceReponse.ErrorCode)
+		_ = client.StartRouting(fromAccount, amount, to)
+		return nil
 	}
 
-	//thangcq: begin routing here
-
-	//get next hop
-	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceReponse.Hash)
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
 
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
@@ -315,5 +313,29 @@ func (client *Client) LnTransferMulti(
 		return err
 	}
 
+	return nil
+}
+
+func (client *Client) GetInvoice(fromAccount *account.PrivateKeySerialized, amount int64, to string) (*pb.IREPMessage, error) {
+	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(to, "@")[1]))
+	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
+	invoiceResponse, err := rpcClient.RequestInvoice(context.Background(), &pb.IREQMessage{
+		Amount: amount,
+		From:   selfAddress,
+		To:     to,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if invoiceResponse.ErrorCode != "" {
+		return nil, errors.New(invoiceResponse.ErrorCode)
+	}
+	return invoiceResponse, nil
+}
+
+func (client *Client) StartRouting(fromAccount *account.PrivateKeySerialized, amount int64, to string) error {
+	// rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(to, "@")[1]))
+	// rpcClient.RREQ()
 	return nil
 }

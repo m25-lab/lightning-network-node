@@ -26,7 +26,7 @@ func New(node *node.LightningNode) (manger *Manager, err error) {
 		log.Println("NewPrintWorker error: ", err.Error())
 		return
 	}
-	manger.JobMap["print"] = Job{worker: printWK, duration: 3}
+	manger.JobMap["print"] = Job{worker: printWK, duration: 300}
 	return
 }
 

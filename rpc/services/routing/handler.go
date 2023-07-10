@@ -322,7 +322,7 @@ func (server *RoutingServer) RERR(ctx context.Context, req *pb.RERRRequest) (*pb
 }
 
 func (server *RoutingServer) GetChannelBalance(ctx context.Context, address string, multisignAddress string) (*models.CreateCommitmentData, error) {
-	lastestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
+	latestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
 		context.Background(),
 		address,
 		fmt.Sprint(multisignAddress+":token:1"),
@@ -331,8 +331,12 @@ func (server *RoutingServer) GetChannelBalance(ctx context.Context, address stri
 	if err != nil {
 		return nil, err
 	}
+	if latestCommitment.IsReplied {
+		return nil, fmt.Errorf("Channel is broadcasted")
+	}
+
 	payload := models.CreateCommitmentData{}
-	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
+	err = json.Unmarshal([]byte(latestCommitment.Data), &payload)
 	if err != nil {
 		return nil, err
 	}
@@ -487,12 +491,20 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req *pb.RREPRequest) 
 }
 
 func BuildRREPFromRREQ(rreq *pb.RREQRequest) (rrep *pb.RREPRequest) {
+	rrepData := models.RREPData{
+		HopCounter:     0,
+		SequenceNumber: time.Now().Unix(),
+	}
+
+	rrepDataByte, _ := json.Marshal(rrepData)
+
 	rrep = &pb.RREPRequest{
 		BroadcastID:        rreq.BroadcastID,
 		ToAddress:          rreq.FromAddress,
 		FromAddress:        rreq.ToAddress,
 		DestinationAddress: rreq.SourceAddress,
 		SourceAddress:      rreq.DestinationAddress,
+		Data:               string(rrepDataByte),
 	}
 	return
 }

@@ -12,5 +12,5 @@ func NewPrintWorker() (*PrintWorker, error) {
 }
 
 func (worker PrintWorker) Handler() {
-	fmt.Println("HEHE")
+	fmt.Println("5 minutes has passed")
 }

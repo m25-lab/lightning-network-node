@@ -249,10 +249,15 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 				msg := tgbotapi.NewMessage(clientId, "")
 				msg.ParseMode = "Markdown"
 				if skipInsert {
-					msg.Text = fmt.Sprintf("✅ *Update new route for `%s` successfully.*\n", req.BroadcastID)
+					msg.Text = fmt.Sprintf("✅ *Update new route for `%s` successfully. Will you start lightning transfer multi hops ?*\n", req.BroadcastID)
 				} else {
-					msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully.*\n", req.BroadcastID)
+					msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully. Will you start lightning transfer multi hops ?*\n", req.BroadcastID)
 				}
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Start", fmt.Sprintf("%s:%s", models.StartLnTransferMultiHop, req.BroadcastID)),
+					),
+				)
 				_, _ = server.Client.Bot.Send(msg)
 			}
 		}
@@ -824,7 +829,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 				println("Missing routing entry for:", req.Dest)
 				return
 			}
-			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.NextHop, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest)
+			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.NextHop, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest, true)
 			if err != nil {
 				println("Trade fwd commitment - LnTransferMulti:", err.Error())
 			}

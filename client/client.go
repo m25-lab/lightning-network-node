@@ -107,6 +107,15 @@ func (client *Client) RunTelegramBot() error {
 			action, messageId, _ := ParseCallbackData(update.CallbackQuery.Data)
 
 			switch action {
+			case models.StartLnTransferMultiHop:
+				var err error
+				res, err := client.ReLnTransferMulti(clientId, messageId)
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", res.Amount, res.To)
+				}
+				break
 			case models.AcceptAddWhitelist:
 				var err error
 				message, err = client.AcceptAddWhitelist(clientId, messageId)
@@ -222,7 +231,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				}
-				err = client.LnTransferMulti(clientId, params[0], amount, nil, nil)
+				err = client.LnTransferMulti(clientId, params[0], amount, nil, nil, false)
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {

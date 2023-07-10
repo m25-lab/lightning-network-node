@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
@@ -230,7 +231,7 @@ func (client *Client) LnTransferMulti(
 	// try get next hop
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceResponse.Hash)
 	if err != nil {
-		_ = client.StartRouting(fromAccount, amount, to)
+		_ = client.StartRouting(invoiceResponse.Hash, amount, selfAddress, to)
 		return nil
 	}
 
@@ -324,18 +325,45 @@ func (client *Client) GetInvoice(fromAccount *account.PrivateKeySerialized, amou
 		From:   selfAddress,
 		To:     to,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 	if invoiceResponse.ErrorCode != "" {
 		return nil, errors.New(invoiceResponse.ErrorCode)
 	}
+
+	// save invoice
+	err = client.Node.Repository.Invoice.InsertInvoice(context.Background(), &models.InvoiceData{
+		Amount: amount,
+		From:   selfAddress,
+		To:     to,
+		Hash:   invoiceResponse.Hash,
+	})
+	if err != nil {
+		return &pb.IREPMessage{
+			ErrorCode: err.Error(),
+		}, nil
+	}
+
 	return invoiceResponse, nil
 }
 
-func (client *Client) StartRouting(fromAccount *account.PrivateKeySerialized, amount int64, to string) error {
-	// rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(to, "@")[1]))
-	// rpcClient.RREQ()
+func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress, destAddress string) error {
+	rreqData := models.RREQData{
+		Amount:         amount,
+		HopCounter:     -1,
+		RemainReward:   0,
+		SequenceNumber: time.Now().Unix(),
+	}
+	rreqDataByte, _ := json.Marshal(rreqData)
+	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(selfAddress, "@")[1]))
+	rpcClient.RREQ(context.Background(), &pb.RREQRequest{
+		BroadcastID:        invoiceHash,
+		DestinationAddress: destAddress,
+		SourceAddress:      selfAddress,
+		// FromAddress:
+		ToAddress: selfAddress,
+		Data:      string(rreqDataByte),
+	})
 	return nil
 }

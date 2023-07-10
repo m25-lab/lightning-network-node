@@ -3,13 +3,14 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 const (
-	ExchangeHashcode   string = "exchange_hashcode"
-	ExchangeCommitment string = "create_commitment"
-	OpenChannel        string = "open_channel"
-	CloseChannel       string = "close_channel"
-	AddFund            string = "add_fund"
-	AddWhitelist       string = "add_whitelist"
-	AcceptAddWhitelist string = "accept_add_whitelist"
+	ExchangeHashcode        string = "exchange_hashcode"
+	ExchangeCommitment      string = "create_commitment"
+	OpenChannel             string = "open_channel"
+	CloseChannel            string = "close_channel"
+	AddFund                 string = "add_fund"
+	AddWhitelist            string = "add_whitelist"
+	AcceptAddWhitelist      string = "accept_add_whitelist"
+	StartLnTransferMultiHop string = "start_ln_transfer_multi_hop"
 )
 
 type AddWhitelistData struct {

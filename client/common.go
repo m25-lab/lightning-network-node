@@ -342,3 +342,25 @@ func (client *Client) ChannelBalance(clientId string, channelID string) (*Channe
 		PartnerBalance: payload.CoinToCreator,
 	}, nil
 }
+
+func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*models.InvoiceData, error) {
+	// get invoice
+	fromAccount, err := client.CurrentAccount(clientID)
+	if err != nil {
+		return nil, err
+	}
+	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
+
+	invoice, err := client.Node.Repository.Invoice.FindByHash(context.Background(), selfAddress, invoiceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// start ln transfer multi hop again
+	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoice.To, &invoiceHash, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return invoice, nil
+}

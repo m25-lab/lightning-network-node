@@ -824,19 +824,14 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		//is middle hop
 		//find next hop and reuse
 		go func() {
-			nextHop, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, req.To, req.Dest, req.HashcodeDest)
-			if err != nil {
-				println("Missing routing entry for:", req.Dest)
-				return
-			}
-			err = server.Client.LnTransferMulti(existToAddress.ClientId, nextHop.NextHop, myCommitmentPayload.CoinTransfer, &req.Dest, &req.HashcodeDest, true)
+			err = server.Client.LnTransferMulti(existToAddress.ClientId, req.Dest, myCommitmentPayload.CoinTransfer, &req.HashcodeDest, true)
 			if err != nil {
 				println("Trade fwd commitment - LnTransferMulti:", err.Error())
 			}
 		}()
 	} else {
 		//is Dest
-		//thangcq: to phase reveal C's secret, call processInvoiceSecret to B
+		//to phase reveal C's secret, call processInvoiceSecret to B
 		fromSplit := strings.Split(req.From, "@")
 		rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(fromSplit[1]))
 		response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{

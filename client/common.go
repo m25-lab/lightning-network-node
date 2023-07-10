@@ -351,13 +351,13 @@ func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*m
 	}
 	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
 
-	invoice, err := client.Node.Repository.Invoice.FindByHash(context.Background(), selfAddress, invoiceHash)
+	invoice, err := client.Node.Repository.Invoice.FindByHashFrom(context.Background(), selfAddress, invoiceHash)
 	if err != nil {
 		return nil, err
 	}
 
 	// start ln transfer multi hop again
-	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoice.To, &invoiceHash, true)
+	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoiceHash, true)
 	if err != nil {
 		return nil, err
 	}

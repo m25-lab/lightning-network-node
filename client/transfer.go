@@ -209,7 +209,6 @@ func (client *Client) LnTransferMulti(
 	clientId string,
 	to string,
 	amount int64,
-	fwdDest *string,
 	hashcodeDest *string,
 	isSkipGetInvoice bool,
 ) error {
@@ -309,7 +308,7 @@ func (client *Client) LnTransferMulti(
 		return err
 	}
 
-	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, fwdDest, hashcodeDest)
+	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest)
 	if err != nil {
 		return err
 	}

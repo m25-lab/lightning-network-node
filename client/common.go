@@ -357,7 +357,7 @@ func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*m
 	}
 
 	// start ln transfer multi hop again
-	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoiceHash, true)
+	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoiceHash, true, 0)
 	if err != nil {
 		return nil, err
 	}

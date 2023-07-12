@@ -3,6 +3,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -104,7 +105,13 @@ func (cn *Channel) CreateSenderCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
+	hops int64,
 ) *channelTypes.MsgSendercommit {
+	blockheight, err := cn.rpcClient.Client.Status(context.Background())
+	if err != nil {
+		println("CreateSenderCommitmentMsg: ", err.Error())
+	}
+	senderLock := blockheight.SyncInfo.LatestBlockHeight + 1000*(hops-1)
 	return &channelTypes.MsgSendercommit{
 		Creator:   multisigAddr,
 		From:      fromAddr,
@@ -125,7 +132,7 @@ func (cn *Channel) CreateSenderCommitmentMsg(
 		},
 		HashcodeDest:     hashCodeDest,
 		TimelockReceiver: "100",
-		TimelockSender:   "10", //thangcq
+		TimelockSender:   strconv.FormatInt(senderLock, 10),
 		Multisig:         multisigAddr,
 	}
 }
@@ -138,7 +145,13 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
+	hops int64,
 ) *channelTypes.MsgReceivercommit {
+	blockheight, err := cn.rpcClient.Client.Status(context.Background())
+	if err != nil {
+		println("CreateReceiverCommitmentMsg: ", err.Error())
+	}
+	senderLock := blockheight.SyncInfo.LatestBlockHeight + 1000*(hops-1)
 	return &channelTypes.MsgReceivercommit{
 		Creator:   multisigAddr,
 		From:      fromAddr,
@@ -158,7 +171,7 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 			Amount: types.NewInt(coinTransfer),
 		},
 		HashcodeDest:   hashCodeDest,
-		TimelockSender: "100",
+		TimelockSender: strconv.FormatInt(senderLock, 10),
 		Multisig:       multisigAddr,
 	}
 }

@@ -211,6 +211,7 @@ func (client *Client) LnTransferMulti(
 	amount int64,
 	hashcodeDest *string,
 	isSkipGetInvoice bool,
+	hops int64,
 ) error {
 	//request invoice
 	fromAccount, err := client.CurrentAccount(clientId)
@@ -235,7 +236,6 @@ func (client *Client) LnTransferMulti(
 	}
 
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
-
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
 	if err != nil {
 		return err
@@ -308,7 +308,10 @@ func (client *Client) LnTransferMulti(
 		return err
 	}
 
-	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest)
+	if hops == 0 {
+		hops = nextHop.HopCounter
+	}
+	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {
 		return err
 	}

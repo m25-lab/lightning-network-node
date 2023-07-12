@@ -26,6 +26,7 @@ type SenderCommitment struct {
 	HashcodeDest     string `json:"hashcode_dest" bson:"hashcode_dest"`
 	TimelockReceiver string `json:"timelock_receiver" bson:"timelock_receiver"`
 	Multisig         string `json:"multisig" bson:"multisig"`
+	Hops             int64  `json:"hops" bson:"hops"`
 }
 
 type ReceiverCommitment struct {

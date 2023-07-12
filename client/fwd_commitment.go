@@ -12,7 +12,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/database/models"
 )
 
-func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, transferAmount int64, fwdDest string, hashcodeDest *string) (*models.Message, error) {
+func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, transferAmount int64, fwdDest string, hashcodeDest *string, hops int64) (*models.Message, error) {
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
 	//get partner hashcode
@@ -41,6 +41,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		transferAmount,
 		exchangeHashcodeData.PartnerHashcode,
 		*hashcodeDest,
+		hops,
 	)
 	//create l1 sign message
 	signCommitmentMsg := channel.SignMsgRequest{
@@ -68,6 +69,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		HashcodeDest:     senderCommitmentMsg.HashcodeDest,
 		TimelockReceiver: senderCommitmentMsg.TimelockReceiver,
 		Multisig:         senderCommitmentMsg.Multisig,
+		Hops:             hops,
 	}
 
 	partnerCommitmentPayload, err := json.Marshal(msg)
@@ -108,6 +110,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		myCommitmentPayload.CoinTransfer,
 		myCommitmentPayload.HashcodeHTLC,
 		myCommitmentPayload.HashcodeDest,
+		hops,
 	)
 
 	signReceiverCommitmentMsg := channel.SignMsgRequest{

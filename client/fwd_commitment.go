@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
@@ -18,6 +19,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	//get partner hashcode
 	exchangeHashcodeMessage, err := client.Node.Repository.Message.FindOneByChannelID(context.Background(), accountPacked.fromAccount.AccAddress().String(), multisigAddr+":token:1")
 	if err != nil {
+		fmt.Println("FindOneByChannelID...")
 		return nil, err
 	}
 
@@ -53,6 +55,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	//sign l1 sender commitment
 	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
+		fmt.Println("SignMultisigTxFromOneAccount...")
 		return nil, err
 	}
 
@@ -89,6 +92,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		Dest:         fwdDest,
 	})
 	if err != nil {
+		fmt.Println("ProcessFwdMessage...")
 		return nil, err
 	}
 
@@ -121,6 +125,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 
 	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
+		fmt.Println("SignMultisigTxFromOneAccount...")
 		return nil, err
 	}
 
@@ -134,6 +139,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		HashcodeDest: myCommitmentPayload.HashcodeDest,
 	})
 	if err != nil {
+		fmt.Println("InsertFwdMessage...")
 		return nil, err
 	}
 

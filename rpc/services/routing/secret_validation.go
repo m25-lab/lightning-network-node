@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
@@ -13,6 +15,7 @@ func (server *RoutingServer) ValidateInvoiceSecret(ctx context.Context, req *pb.
 
 	rCommit, err := server.Client.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, req.To, req.Hashcode)
 	if err != nil {
+		fmt.Println("FindReceiverCommitByDestHash...")
 		return nil, err
 	}
 

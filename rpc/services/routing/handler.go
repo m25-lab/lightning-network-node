@@ -20,6 +20,7 @@ import (
 )
 
 func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb.RoutingBaseResponse, error) {
+	log.Println("RREQ...")
 	if req == nil {
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
@@ -162,6 +163,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 }
 
 func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb.RoutingBaseResponse, error) {
+	log.Println("RREP...")
 	if req == nil {
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
@@ -246,6 +248,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 
 	// If have check is source location is selfEndpoint
 	if server.CheckIsDestination(ctx, req.DestinationAddress) {
+		log.Println("YEAH")
 		// If yes get telegram client id --> push a message
 		address, err := server.Node.Repository.Address.FindByAddress(ctx, getWalletAddress(req.DestinationAddress))
 		if err == nil {
@@ -263,7 +266,10 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 						tgbotapi.NewInlineKeyboardButtonData("Start", fmt.Sprintf("%s:%s", models.StartLnTransferMultiHop, req.BroadcastID)),
 					),
 				)
-				_, _ = server.Client.Bot.Send(msg)
+				_, err := server.Client.Bot.Send(msg)
+				if err != nil {
+					fmt.Println("err :", err.Error())
+				}
 			}
 		}
 	} else {
@@ -296,6 +302,9 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 }
 
 func (server *RoutingServer) RERR(ctx context.Context, req *pb.RERRRequest) (*pb.RoutingBaseResponse, error) {
+	log.Println("RERR...")
+	rrep, _ := json.Marshal(req)
+	log.Println(string(rrep))
 	if req == nil {
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_PARAM_INVALID,
@@ -426,7 +435,7 @@ func (server *RoutingServer) StartRREP(toAddress string, req *pb.RREPRequest) er
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
-	// time..Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
 	response, err := rpcClient.RREP(ctxTimeout, req)
@@ -445,7 +454,7 @@ func (server *RoutingServer) StartRERR(toAddress string, req *pb.RERRRequest) er
 	conn := server.Client.CreateConn(getEndpoint(toAddress))
 	defer conn.Close()
 	rpcClient := pb.NewRoutingServiceClient(conn)
-	// time..Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 	ctxTimeout, cancelFunc := context.WithTimeout(context.Background(), time.Duration(server.Node.Config.LNode.TimeoutRequest)*time.Second)
 	defer cancelFunc()
 	response, err := rpcClient.RERR(ctxTimeout, req)
@@ -475,7 +484,7 @@ func (server *RoutingServer) ForwardRREQ(toAddress string, req *pb.RREQRequest) 
 		if response.ErrorCode != pb.RoutingErrorCode_OK {
 			log.Println("ForwardRREQ: ", response)
 		}
-		go server.StartRERR(req.FromAddress, BuildRERRFromRREQ(req, response.Response))
+		// go server.StartRERR(req.FromAddress, BuildRERRFromRREQ(req, response.Response))
 	}
 	return nil
 }
@@ -494,8 +503,8 @@ func (server *RoutingServer) ForwardRREP(toAddress string, req *pb.RREPRequest) 
 	} else {
 		if response.ErrorCode != pb.RoutingErrorCode_OK {
 			log.Println("ForwardRREP: ", response)
+			go server.StartRERR(req.FromAddress, BuildRERRFromRREP(req, response.Response))
 		}
-		go server.StartRERR(req.FromAddress, BuildRERRFromRREP(req, response.Response))
 	}
 	return nil
 }
@@ -520,6 +529,7 @@ func BuildRREPFromRREQ(rreq *pb.RREQRequest) (rrep *pb.RREPRequest) {
 }
 
 func BuildRERRFromRREQ(rreq *pb.RREQRequest, msg string) (rerr *pb.RERRRequest) {
+	log.Println("BuildRERRFromRREQ...")
 	rerr = &pb.RERRRequest{
 		DestinationAddress: rreq.DestinationAddress,
 		FromAddress:        rreq.ToAddress,
@@ -530,6 +540,7 @@ func BuildRERRFromRREQ(rreq *pb.RREQRequest, msg string) (rerr *pb.RERRRequest) 
 }
 
 func BuildRERRFromRREP(rrep *pb.RREPRequest, msg string) (rerr *pb.RERRRequest) {
+	log.Println("BuildRERRFromRREP...")
 	rerr = &pb.RERRRequest{
 		DestinationAddress: rrep.DestinationAddress,
 		FromAddress:        rrep.ToAddress,
@@ -540,12 +551,14 @@ func BuildRERRFromRREP(rrep *pb.RREPRequest, msg string) (rerr *pb.RERRRequest) 
 }
 
 func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingBaseResponse, error) {
+	fmt.Println("ProcessInvoiceSecret...run")
 	//check hash
 	receiverCommit, err := server.ValidateInvoiceSecret(ctx, req)
 	if err != nil {
+		fmt.Println("ValidateInvoiceSecret...")
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_VALIDATE_INVOICE_SECRET,
-		}, nil
+		}, err
 	}
 
 	//luu DB
@@ -555,6 +568,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		Secret:       req.Secret,
 	}
 	if err := server.Node.Repository.FwdSecret.InsertSecret(ctx, &data); err != nil {
+		fmt.Println("InsertSecret...")
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_INSERT_SECRET,
 		}, nil
@@ -565,6 +579,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 
 	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr) //check coi A co trong db minh khong
 	if err != nil {
+		fmt.Println("FindByAddress...")
 		if err == mongo.ErrNoDocuments {
 			//minh khong co A
 			go func() {
@@ -593,6 +608,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 				ErrorCode: pb.RoutingErrorCode_OK,
 			}, nil
 		} else {
+			fmt.Println("FindByAddress...ABC")
 			return &pb.RoutingBaseResponse{
 				ErrorCode: pb.RoutingErrorCode_DESTINATION_ADDRESS_FIND_BY_ADDRESS,
 			}, nil
@@ -663,7 +679,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1005",
-		}, nil
+		}, err
 	}
 	toAccount, _ := account.NewAccount().ImportAccount(existToAddress.Mnemonic)
 
@@ -673,7 +689,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1004",
-		}, nil
+		}, err
 	}
 	fromAccount := account.NewPKAccount(fromAddressFromDB.PartnerPubkey)
 
@@ -685,7 +701,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 
 	//check hash code htlc
@@ -694,13 +710,13 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 	if exchangeHashcodeMessage.Action != models.ExchangeHashcode {
 		return &pb.FwdMessageResponse{
 			Response:  "partner has not sent hashcode yet",
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 
 	var exchangeHashcodeData models.ExchangeHashcodeData
@@ -720,7 +736,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  "partner hashcode is not correct",
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 
 	//build SenderCommit and sign
@@ -748,7 +764,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 	//Store DB sender commit with 2 sig
 	err = server.Node.Repository.FwdCommitment.InsertFwdMessage(ctx, &models.FwdMessage{
@@ -764,7 +780,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 
 	//Build and sign receiver commit
@@ -790,7 +806,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 
 	partnerCommitmentPayload, err := json.Marshal(models.ReceiverCommitment{
@@ -811,7 +827,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		return &pb.FwdMessageResponse{
 			Response:  err.Error(),
 			ErrorCode: "1006",
-		}, nil
+		}, err
 	}
 	//find invoice in db, exist => is Dest
 
@@ -824,7 +840,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			return &pb.FwdMessageResponse{
 				Response:  err.Error(),
 				ErrorCode: "checkIsDest",
-			}, nil
+			}, err
 		}
 	}
 	if needNext {
@@ -849,6 +865,8 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			Dest:     invoice.From,
 		})
 		if err != nil {
+			fmt.Println("ProcessInvoiceSecret2...")
+			fmt.Println("", err.Error())
 			return nil, err
 		}
 		if response.ErrorCode != pb.RoutingErrorCode_OK {
@@ -861,7 +879,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		Response:   string(partnerCommitmentPayload),
 		PartnerSig: strSigReceiver,
 		ErrorCode:  "",
-	}, nil
+	}, err
 }
 
 func GenerateRewardFromRREQ(rreq *pb.RREQRequest) int64 {

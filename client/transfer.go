@@ -226,18 +226,28 @@ func (client *Client) LnTransferMulti(
 		if err != nil {
 			return err
 		}
+		hashcodeDest = &invoiceResponse.Hash
 	}
 
 	// try get next hop
-	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceResponse.Hash)
+
+	fmt.Println("selfAddress", selfAddress)
+	fmt.Println("to", to)
+	if hashcodeDest == nil {
+		return fmt.Errorf("Nil")
+	} else {
+		fmt.Println("hash ", *hashcodeDest)
+	}
+	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, *hashcodeDest)
 	if err != nil {
-		go client.StartRouting(invoiceResponse.Hash, amount, selfAddress, to)
+		go client.StartRouting(*hashcodeDest, amount, selfAddress, to)
 		return fmt.Errorf("Hệ thống đang định tuyến")
 	}
 
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
-	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHopSplit[0])
+	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHop.NextHop)
 	if err != nil {
+		fmt.Println("FindOneByPartnerAddress...")
 		return err
 	}
 
@@ -255,6 +265,7 @@ func (client *Client) LnTransferMulti(
 	multisigAddr, _, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 	multisigAddrBalance, err := client.Balance(multisigAddr)
 	if err != nil {
+		fmt.Println("Balance...")
 		return err
 	}
 	if multisigAddrBalance < amount {
@@ -285,6 +296,7 @@ func (client *Client) LnTransferMulti(
 		models.ExchangeCommitment,
 	)
 	if err != nil {
+		fmt.Println("FindOneByChannelIDWithAction...")
 		return err
 	}
 	if lastestCommitment.IsReplied {
@@ -293,6 +305,7 @@ func (client *Client) LnTransferMulti(
 	payload := models.CreateCommitmentData{}
 	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
 	if err != nil {
+		fmt.Println("CreateCommitmentData...")
 		return err
 	}
 
@@ -305,6 +318,7 @@ func (client *Client) LnTransferMulti(
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {
+		fmt.Println("ExchangeHashcode...")
 		return err
 	}
 
@@ -313,6 +327,7 @@ func (client *Client) LnTransferMulti(
 	}
 	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {
+		fmt.Println("ExchangeFwdCommitment...")
 		return err
 	}
 

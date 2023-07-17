@@ -2,6 +2,7 @@ package mongo_repo_impl
 
 import (
 	"context"
+
 	"github.com/m25-lab/lightning-network-node/database/models"
 	repo "github.com/m25-lab/lightning-network-node/database/repository"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,7 +23,7 @@ func (mongo *FwdCommitmentRepoImplMongo) InsertFwdMessage(ctx context.Context, s
 func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, owner string, hash string) (*models.FwdMessage, error) {
 	rcC := models.FwdMessage{}
 
-	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.ReceiverCommit, "hash": hash, "to": owner})
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.ReceiverCommit, "hashcode_dest": hash, "to": owner})
 	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx contex
 func (mongo *FwdCommitmentRepoImplMongo) FindSenderCommitByDestHash(ctx context.Context, owner string, hash string) (*models.FwdMessage, error) {
 	rcC := models.FwdMessage{}
 
-	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.SenderCommit, "hash": hash, "to": owner})
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"action": models.SenderCommit, "hashcode_dest": hash, "to": owner})
 	if err := response.Decode(&rcC); err != nil {
 		return nil, err
 	}

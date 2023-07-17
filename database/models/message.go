@@ -10,7 +10,7 @@ const (
 	AddFund                 string = "add_fund"
 	AddWhitelist            string = "add_whitelist"
 	AcceptAddWhitelist      string = "accept_add_whitelist"
-	StartLnTransferMultiHop string = "start_ln_transfer_multi_hop"
+	StartLnTransferMultiHop string = "SLNTMH" // start_ln_transfer_multi_hop
 )
 
 type AddWhitelistData struct {

@@ -231,8 +231,8 @@ func (client *Client) LnTransferMulti(
 	// try get next hop
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, invoiceResponse.Hash)
 	if err != nil {
-		_ = client.StartRouting(invoiceResponse.Hash, amount, selfAddress, to)
-		return nil
+		go client.StartRouting(invoiceResponse.Hash, amount, selfAddress, to)
+		return fmt.Errorf("Hệ thống đang định tuyến")
 	}
 
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
@@ -351,6 +351,7 @@ func (client *Client) GetInvoice(fromAccount *account.PrivateKeySerialized, amou
 }
 
 func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress, destAddress string) error {
+	fmt.Println("StartRouting... run")
 	rreqData := models.RREQData{
 		Amount:         amount,
 		HopCounter:     -1,
@@ -358,8 +359,8 @@ func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress
 		SequenceNumber: time.Now().Unix(),
 	}
 	rreqDataByte, _ := json.Marshal(rreqData)
-	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(strings.Split(selfAddress, "@")[1]))
-	rpcClient.RREQ(context.Background(), &pb.RREQRequest{
+	rpcClient := pb.NewRoutingServiceClient(client.CreateConn(client.Node.Config.LNode.External))
+	res, err := rpcClient.RREQ(context.Background(), &pb.RREQRequest{
 		BroadcastID:        invoiceHash,
 		DestinationAddress: destAddress,
 		SourceAddress:      selfAddress,
@@ -367,5 +368,10 @@ func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress
 		ToAddress: selfAddress,
 		Data:      string(rreqDataByte),
 	})
+	if err != nil {
+		fmt.Println("StartRouting err: ", err.Error())
+	} else {
+		fmt.Println("StartRouting res: ", res.ErrorCode)
+	}
 	return nil
 }

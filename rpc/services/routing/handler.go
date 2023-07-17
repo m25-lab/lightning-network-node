@@ -140,6 +140,11 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			if neighborNodeAddress == req.SourceAddress {
 				continue
 			}
+
+			if neighborNodeAddress == req.FromAddress {
+				continue
+			}
+
 			a, err := server.GetChannelBalance(ctx, getWalletAddress(req.ToAddress), neighborNode.MultiAddress)
 			if err != nil {
 				continue

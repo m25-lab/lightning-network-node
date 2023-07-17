@@ -247,7 +247,7 @@ func (server *MessageServer) BroadcastNoti(ctx context.Context, req *pb.Broadcas
 	if err != nil {
 		telMsg.Text = err.Error()
 	} else {
-		telMsg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw-Timelock Message successfully.* \n" +
+		telMsg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw-Hashlock Message successfully.* \n" +
 			"Please check your balance.")
 	}
 	_, err = server.Client.Bot.Send(telMsg)

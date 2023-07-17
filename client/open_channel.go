@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
+
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"github.com/m25-lab/lightning-network-node/database/models"
@@ -94,7 +95,7 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	//}
 	//signList = append(signList, signByte2)
 	//signList = append(signList, signByte1)
-	//fmt.Println(signList)
+	//log.Println(signList)
 	//
 	//newTx := common.NewMultisigTxBuilder(*client.ClientCtx, nil, signOpenChannelMsg.GasLimit, signOpenChannelMsg.GasPrice, 0, 2)
 	//txBuilderMultiSign, err := newTx.BuildUnsignedTx(signOpenChannelMsg.Msg)
@@ -110,12 +111,12 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	//if err != nil {
 	//	return err
 	//}
-	//fmt.Println("txJson:", txJson)
+	//log.Println("txJson:", txJson)
 	//txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
 	//if err != nil {
 	//	return err
 	//}
-	//fmt.Println("txByte:", txByte)
+	//log.Println("txByte:", txByte)
 	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, strSig, partnerSig, signOpenChannelMsg)
 	if err != nil {
 		return err
@@ -124,7 +125,7 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	if err != nil {
 		return err
 	}
-	fmt.Println("\n broadcast open channel response: ", broadcastResponse)
+	log.Println("\n broadcast open channel response: ", broadcastResponse)
 
 	return nil
 }

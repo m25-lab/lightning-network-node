@@ -2,7 +2,7 @@ package channel
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -48,7 +48,7 @@ func (cn *Channel) SignMultisigTxFromOneAccount(req SignMsgRequest,
 	txBuilder, err := newTx.BuildUnsignedTx(req.Msg)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return "", err
 	}
 

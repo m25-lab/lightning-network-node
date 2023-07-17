@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"strconv"
 	"strings"
@@ -44,6 +45,10 @@ func (client *Client) LnTransfer(
 	}
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), to)
 	if err != nil {
+		fmt.Println("fromAccount.AccAddress().String() ", fromAccount.AccAddress().String())
+		fmt.Println("to ", to)
+		fmt.Println("FindOneByPartnerAddress...")
+		fmt.Println("err ", err.Error())
 		return nil, err
 	}
 	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
@@ -99,6 +104,7 @@ func (client *Client) LnTransfer(
 			models.ExchangeCommitment,
 		)
 		if err != nil {
+			fmt.Println("FindOneByChannelIDWithAction... ", err.Error())
 			return nil, err
 		}
 
@@ -122,6 +128,7 @@ func (client *Client) LnTransfer(
 			models.ExchangeHashcode,
 		)
 		if err != nil {
+			fmt.Println("FindOneByChannelIDWithAction...")
 			return nil, err
 		}
 		err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
@@ -231,12 +238,12 @@ func (client *Client) LnTransferMulti(
 
 	// try get next hop
 
-	fmt.Println("selfAddress", selfAddress)
-	fmt.Println("to", to)
+	log.Println("selfAddress", selfAddress)
+	log.Println("to", to)
 	if hashcodeDest == nil {
 		return fmt.Errorf("Nil")
 	} else {
-		fmt.Println("hash ", *hashcodeDest)
+		log.Println("hash ", *hashcodeDest)
 	}
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, *hashcodeDest)
 	if err != nil {
@@ -247,7 +254,7 @@ func (client *Client) LnTransferMulti(
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHop.NextHop)
 	if err != nil {
-		fmt.Println("FindOneByPartnerAddress...")
+		log.Println("FindOneByPartnerAddress...")
 		return err
 	}
 
@@ -265,7 +272,7 @@ func (client *Client) LnTransferMulti(
 	multisigAddr, _, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 	multisigAddrBalance, err := client.Balance(multisigAddr)
 	if err != nil {
-		fmt.Println("Balance...")
+		log.Println("Balance...")
 		return err
 	}
 	if multisigAddrBalance < amount {
@@ -296,7 +303,7 @@ func (client *Client) LnTransferMulti(
 		models.ExchangeCommitment,
 	)
 	if err != nil {
-		fmt.Println("FindOneByChannelIDWithAction...")
+		log.Println("FindOneByChannelIDWithAction...")
 		return err
 	}
 	if lastestCommitment.IsReplied {
@@ -305,7 +312,7 @@ func (client *Client) LnTransferMulti(
 	payload := models.CreateCommitmentData{}
 	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
 	if err != nil {
-		fmt.Println("CreateCommitmentData...")
+		log.Println("CreateCommitmentData...")
 		return err
 	}
 
@@ -318,7 +325,7 @@ func (client *Client) LnTransferMulti(
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {
-		fmt.Println("ExchangeHashcode...")
+		log.Println("ExchangeHashcode...")
 		return err
 	}
 
@@ -327,7 +334,7 @@ func (client *Client) LnTransferMulti(
 	}
 	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {
-		fmt.Println("ExchangeFwdCommitment...")
+		log.Println("ExchangeFwdCommitment...", err.Error())
 		return err
 	}
 
@@ -366,7 +373,7 @@ func (client *Client) GetInvoice(fromAccount *account.PrivateKeySerialized, amou
 }
 
 func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress, destAddress string) error {
-	fmt.Println("StartRouting... run")
+	log.Println("StartRouting... run")
 	rreqData := models.RREQData{
 		Amount:         amount,
 		HopCounter:     -1,
@@ -384,9 +391,9 @@ func (client *Client) StartRouting(invoiceHash string, amount int64, selfAddress
 		Data:      string(rreqDataByte),
 	})
 	if err != nil {
-		fmt.Println("StartRouting err: ", err.Error())
+		log.Println("StartRouting err: ", err.Error())
 	} else {
-		fmt.Println("StartRouting res: ", res.ErrorCode)
+		log.Println("StartRouting res: ", res.ErrorCode)
 	}
 	return nil
 }

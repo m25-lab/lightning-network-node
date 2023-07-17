@@ -1,8 +1,6 @@
 package worker
 
-import (
-	"fmt"
-)
+import "log"
 
 type PrintWorker struct {
 }
@@ -12,5 +10,5 @@ func NewPrintWorker() (*PrintWorker, error) {
 }
 
 func (worker PrintWorker) Handler() {
-	fmt.Println("5 minutes has passed")
+	log.Println("5 minutes has passed")
 }

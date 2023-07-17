@@ -48,7 +48,7 @@ func (mongo *RoutingRepoImplMongo) FindRouting(ctx context.Context, input models
 		filter["next_hop"] = input.NextHop
 	}
 
-	// fmt.Println("filter ", filter)
+	// log.Println("filter ", filter)
 	cur, err := mongo.Db.Collection(Routing).Find(ctx, filter)
 	if err != nil {
 		return nil, err

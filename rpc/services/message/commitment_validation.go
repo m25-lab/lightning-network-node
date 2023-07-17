@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strconv"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
@@ -154,13 +155,13 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		if myCommitmentPayload.FwdDest != ownAddr {
 			go func() {
 				//find next
-				nextHop, err := server.Client.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, selfAddress, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
+				nextHop, err := server.Client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, myCommitmentPayload.FwdDest, myCommitmentPayload.HashcodeDest)
 				if err != nil {
 					println("Fwd Commitment: nextHop-FindByDestAndBroadcastId:", err.Error())
 					return
 				}
 				//find receivercommit
-				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(ctx, ownAddr, myCommitmentPayload.HashcodeDest)
+				rC, err := server.Node.Repository.FwdCommitment.FindReceiverCommitByDestHash(context.Background(), ownAddr, myCommitmentPayload.HashcodeDest)
 				if err != nil {
 					println("Fwd Commitment: rC-FindReceiverCommitByDestHash:", err.Error())
 					return

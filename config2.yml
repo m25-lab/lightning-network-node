@@ -3,7 +3,7 @@ database:
   user: "admin"
   password: "8dEEFgSldfSerTHO"
   timeout: 10
-  dbname: "testing_mml"
+  dbname: "testing_18jul_2"
 
 node:
   chainId: "channel"

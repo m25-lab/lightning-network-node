@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 )
@@ -36,11 +36,11 @@ func main() {
 	AAccount, _ := acc.ImportAccount("excuse quiz oyster vendor often spray day vanish slice topic pudding crew promote floor shadow best subway slush slender good merit hollow certain repeat")
 	BAccount, _ := acc.ImportAccount("claim market flip canoe wreck maid recipe bright fuel slender ladder album behind repeat come trophy come vicious frown prefer height unknown thank damp")
 
-	fmt.Println("account A:", AAccount.AccAddress().String())
-	fmt.Println("account B:", BAccount.AccAddress().String())
-	fmt.Println("account A public key:", AAccount.PublicKey().String())
+	log.Println("account A:", AAccount.AccAddress().String())
+	log.Println("account B:", BAccount.AccAddress().String())
+	log.Println("account A public key:", AAccount.PublicKey().String())
 
 	newPKAccount := account.NewPKAccount("02E35D749E46BF716CE2C59525A162D06AC267F98E35CC56F2B8C695DF1AD16E27")
-	fmt.Println(newPKAccount.PublicKey().String())
-	fmt.Println(newPKAccount.AccAddress().String())
+	log.Println(newPKAccount.PublicKey().String())
+	log.Println(newPKAccount.AccAddress().String())
 }

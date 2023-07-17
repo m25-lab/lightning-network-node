@@ -3,6 +3,7 @@ package bank
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 
@@ -149,14 +150,14 @@ func (b *Bank) TransferRawDataAndBroadcast(param *TransferRequest) (*sdk.TxRespo
 		panic(err)
 	}
 
-	fmt.Println("rawData", string(txJson))
+	log.Println("rawData", string(txJson))
 
 	txByte, err := common.TxBuilderJsonDecoder(b.rpcClient.TxConfig, txJson)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(ethCommon.BytesToHash(txByte).String())
+	log.Println(ethCommon.BytesToHash(txByte).String())
 
 	return b.rpcClient.BroadcastTxCommit(txByte)
 }

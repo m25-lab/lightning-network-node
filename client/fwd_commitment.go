@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
@@ -14,12 +14,13 @@ import (
 )
 
 func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, transferAmount int64, fwdDest string, hashcodeDest *string, hops int64) (*models.Message, error) {
+	log.Println("ExchangeFwdCommitment... run")
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
 	//get partner hashcode
 	exchangeHashcodeMessage, err := client.Node.Repository.Message.FindOneByChannelID(context.Background(), accountPacked.fromAccount.AccAddress().String(), multisigAddr+":token:1")
 	if err != nil {
-		fmt.Println("FindOneByChannelID...")
+		log.Println("FindOneByChannelID...")
 		return nil, err
 	}
 
@@ -55,7 +56,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	//sign l1 sender commitment
 	strSig, err := channelClient.SignMultisigTxFromOneAccount(signCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
-		fmt.Println("SignMultisigTxFromOneAccount...")
+		log.Println("SignMultisigTxFromOneAccount...")
 		return nil, err
 	}
 
@@ -92,7 +93,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		Dest:         fwdDest,
 	})
 	if err != nil {
-		fmt.Println("ProcessFwdMessage...")
+		log.Println("ProcessFwdMessage...", err.Error())
 		return nil, err
 	}
 
@@ -125,7 +126,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 
 	strSigReceiver, err := channelClient.SignMultisigTxFromOneAccount(signReceiverCommitmentMsg, accountPacked.fromAccount, multiSigPubkey, false)
 	if err != nil {
-		fmt.Println("SignMultisigTxFromOneAccount...")
+		log.Println("SignMultisigTxFromOneAccount...")
 		return nil, err
 	}
 
@@ -139,7 +140,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		HashcodeDest: myCommitmentPayload.HashcodeDest,
 	})
 	if err != nil {
-		fmt.Println("InsertFwdMessage...")
+		log.Println("InsertFwdMessage...")
 		return nil, err
 	}
 

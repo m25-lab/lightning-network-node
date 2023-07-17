@@ -75,7 +75,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 
 	newSequenceNumber := time.Now().Unix()
 	if !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
-		// fmt.Println("RREQ")
+		// log.Println("RREQ")
 		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
 			ID:                 primitive.NewObjectID(),
 			BroadcastID:        req.BroadcastID,
@@ -135,7 +135,7 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			}, nil
 		}
 
-		// fmt.Println("neighborNodes ", neighborNodes)
+		// log.Println("neighborNodes ", neighborNodes)
 		for _, neighborNode := range neighborNodes {
 			neighborNodeAddress := neighborNode.PartnerAddress
 			if neighborNodeAddress == req.SourceAddress {
@@ -229,7 +229,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 
 	if !skipInsert && !server.CheckSelfIsTargetNode(ctx, req.SourceAddress) {
 		// save record
-		// fmt.Println("RREP")
+		// log.Println("RREP")
 		err = server.Node.Repository.Routing.InsertOne(ctx, &models.Routing{
 			ID:                 primitive.NewObjectID(),
 			BroadcastID:        req.BroadcastID,
@@ -268,7 +268,7 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 				)
 				_, err := server.Client.Bot.Send(msg)
 				if err != nil {
-					fmt.Println("err :", err.Error())
+					log.Println("err :", err.Error())
 				}
 			}
 		}
@@ -551,11 +551,11 @@ func BuildRERRFromRREP(rrep *pb.RREPRequest, msg string) (rerr *pb.RERRRequest) 
 }
 
 func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingBaseResponse, error) {
-	fmt.Println("ProcessInvoiceSecret...run")
+	log.Println("ProcessInvoiceSecret...run")
 	//check hash
 	receiverCommit, err := server.ValidateInvoiceSecret(ctx, req)
 	if err != nil {
-		fmt.Println("ValidateInvoiceSecret...")
+		log.Println("ValidateInvoiceSecret...")
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_VALIDATE_INVOICE_SECRET,
 		}, err
@@ -568,7 +568,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		Secret:       req.Secret,
 	}
 	if err := server.Node.Repository.FwdSecret.InsertSecret(ctx, &data); err != nil {
-		fmt.Println("InsertSecret...")
+		log.Println("InsertSecret...")
 		return &pb.RoutingBaseResponse{
 			ErrorCode: pb.RoutingErrorCode_INSERT_SECRET,
 		}, nil
@@ -577,19 +577,20 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	split := strings.Split(req.Dest, "@")
 	destAddr := split[0] // A
 
+	fmt.Println("destAddr ", destAddr)
 	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr) //check coi A co trong db minh khong
 	if err != nil {
-		fmt.Println("FindByAddress...")
+		log.Println("FindByAddress...")
 		if err == mongo.ErrNoDocuments {
 			//minh khong co A
 			go func() {
-				nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, req.To, req.Dest, req.Hashcode)
+				nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, req.Dest, req.Hashcode)
 				if err != nil {
 					println("nextEntry_FindByDestAndBroadcastId", err.Error())
 				}
 				nextEndpoint := strings.Split(nextEntry.NextHop, "@")[1]
 				rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(nextEndpoint))
-				response, err := rpcClient.ProcessInvoiceSecret(ctx, &pb.InvoiceSecretMessage{
+				response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
 					From:     req.To,
 					To:       nextEntry.NextHop,
 					Hashcode: req.Hashcode,
@@ -608,7 +609,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 				ErrorCode: pb.RoutingErrorCode_OK,
 			}, nil
 		} else {
-			fmt.Println("FindByAddress...ABC")
+			log.Println("FindByAddress...ABC")
 			return &pb.RoutingBaseResponse{
 				ErrorCode: pb.RoutingErrorCode_DESTINATION_ADDRESS_FIND_BY_ADDRESS,
 			}, nil
@@ -616,21 +617,29 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	}
 	// is dest -> phase commitment
 	go func() {
-		invoice, err := server.Node.Repository.Invoice.FindByHash(ctx, req.To, req.Hashcode)
+		invoice, err := server.Node.Repository.Invoice.FindByHashFrom(context.Background(), req.To, req.Hashcode)
 		if err != nil {
 			//thangcq: in Tele
+			fmt.Println("req.To", req.To)
+			fmt.Println("req.Hashcode", req.Hashcode)
 			println("is dest - commitment :", err.Error())
 			return
 		}
-		amount := receiverCommit.CoinTransfer
-		nexthop, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(ctx, req.To, invoice.To, invoice.Hash)
-		if err != nil {
-			println("FindRouting", err.Error())
-			return
-		}
-		dest := nexthop.NextHop
 
-		_, err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &dest, &receiverCommit.HashcodeDest)
+		receiverCommitData := models.ReceiverCommitment{}
+		err = json.Unmarshal([]byte(receiverCommit.Data), &receiverCommitData)
+		if err != nil {
+			println("Unmarshal receiverCommitData")
+		}
+		amount := receiverCommitData.CoinTransfer
+		// nexthop, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, invoice.To, invoice.Hash)
+		// if err != nil {
+		// 	println("FindRouting", err.Error())
+		// 	return
+		// }
+		// dest := nexthop.NextHop
+
+		_, err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &invoice.To, &receiverCommit.HashcodeDest)
 		if err != nil {
 			println("Trade commitment - LnTransfer:", err.Error())
 		}
@@ -847,6 +856,9 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		//is middle hop
 		//find next hop and reuse
 		go func() {
+			log.Println("a")
+			time.Sleep(time.Second * 2)
+			log.Println("b")
 			err = server.Client.LnTransferMulti(existToAddress.ClientId, req.Dest, myCommitmentPayload.CoinTransfer, &req.HashcodeDest, true, myCommitmentPayload.Hops-1)
 			if err != nil {
 				println("Trade fwd commitment - LnTransferMulti:", err.Error())
@@ -855,31 +867,37 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	} else {
 		//is Dest
 		//to phase reveal C's secret, call processInvoiceSecret to B
-		fromSplit := strings.Split(req.From, "@")
-		rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(fromSplit[1]))
-		response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
-			Hashcode: invoice.Hash,
-			Secret:   invoice.Secret,
-			From:     req.To,
-			To:       req.From,
-			Dest:     invoice.From,
-		})
-		if err != nil {
-			fmt.Println("ProcessInvoiceSecret2...")
-			fmt.Println("", err.Error())
-			return nil, err
-		}
-		if response.ErrorCode != pb.RoutingErrorCode_OK {
-			println("start ProcessInvoiceSecret: ", response.ErrorCode)
-			//thangcq: in ra Tele?
-		}
+		go func() {
+			log.Println("c")
+			time.Sleep(time.Second * 2)
+			log.Println("d")
+			fromSplit := strings.Split(req.From, "@")
+			rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(fromSplit[1]))
+			response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
+				Hashcode: invoice.Hash,
+				Secret:   invoice.Secret,
+				From:     req.To,
+				To:       req.From,
+				Dest:     invoice.From,
+			})
+			if err != nil {
+				log.Println("ProcessInvoiceSecret2...")
+				log.Println("", err.Error())
+				// return nil, err
+			} else {
+				if response.ErrorCode != pb.RoutingErrorCode_OK {
+					println("start ProcessInvoiceSecret: ", response.ErrorCode)
+					//thangcq: in ra Tele?
+				}
+			}
+		}()
 	}
 
 	return &pb.FwdMessageResponse{
 		Response:   string(partnerCommitmentPayload),
 		PartnerSig: strSigReceiver,
 		ErrorCode:  "",
-	}, err
+	}, nil
 }
 
 func GenerateRewardFromRREQ(rreq *pb.RREQRequest) int64 {

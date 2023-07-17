@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/m25-lab/lightning-network-node/client"
@@ -50,7 +51,7 @@ func main() {
 		wg.Done()
 	}()
 
-	// fmt.Println("Running jobs...")
+	// log.Println("Running jobs...")
 	// manager, err := job.New(node)
 	// checkErr(err)
 	// go func() {
@@ -58,6 +59,6 @@ func main() {
 	// 	wg.Done()
 	// }()
 
-	fmt.Println("Connected to MongoDB!")
+	log.Println("Connected to MongoDB!")
 	wg.Wait()
 }

@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"strings"
 
@@ -71,7 +71,7 @@ func (gateway *RPCServer) RunGateway(address string) error {
 		return err
 	}
 
-	fmt.Println("Server is running in port", strings.Split(address, ":")[1])
+	log.Println("Server is running in port", strings.Split(address, ":")[1])
 
 	err = gateway.grpcServer.Serve(listener)
 	if err != nil {

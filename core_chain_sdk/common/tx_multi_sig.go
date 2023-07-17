@@ -3,6 +3,8 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/ethereum/go-ethereum/common"
 	emvTypes "github.com/evmos/ethermint/x/evm/types"
 
@@ -128,7 +130,7 @@ func (t *TxMulSign) SignTxWithSignerAddress(txBuilder client.TxBuilder, multiSig
 		AccountNumber: t.txf.AccountNumber(),
 		Sequence:      t.txf.Sequence(),
 	}
-	fmt.Println("$$$", t.rpcClient.ChainID, t.txf.AccountNumber(), t.txf.Sequence())
+	log.Println("$$$", t.rpcClient.ChainID, t.txf.AccountNumber(), t.txf.Sequence())
 	signWithPrivKey, err := tx.SignWithPrivKey(
 		t.txf.SignMode(),
 		signerData,

@@ -152,6 +152,8 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			if err != nil {
 				continue
 			}
+			println("CointToHTLC: ", a.CoinToHtlc)
+			println("rreqData.Amount", rreqData.Amount)
 			if a.CoinToHtlc > rreqData.Amount {
 				forwardRREQRequest.ToAddress = neighborNodeAddress
 				go server.ForwardRREQ(neighborNodeAddress, &forwardRREQRequest)
@@ -265,9 +267,9 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 				msg := tgbotapi.NewMessage(clientId, "")
 				msg.ParseMode = "Markdown"
 				if skipInsert {
-					msg.Text = fmt.Sprintf("✅ Update new route for `%s` successfully with `%s`. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
+					msg.Text = fmt.Sprintf("✅ Update new route for `%s` successfully with `%d` hops. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
 				} else {
-					msg.Text = fmt.Sprintf("✅ Found route for `%s` successfully with `%d`. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
+					msg.Text = fmt.Sprintf("✅ Found route for `%s` successfully with `%d` hops. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
 				}
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(
@@ -642,7 +644,7 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 		time.Sleep(1 * time.Second)
 		msg := fmt.Sprintf("*Received Invoice Secret* \n"+
 			"HashcodeDest: `%s`\n"+
-			"Trading Commitment...", req.Hashcode)
+			"*Trading Commitment...*", req.Hashcode)
 		err := server.Client.SendTele(existToAddress.ClientId, msg)
 		if err != nil {
 			println("Noti Tele: ", err.Error())
@@ -898,7 +900,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			time.Sleep(time.Second * 2)
 			msg := fmt.Sprintf("*Received FWD Commit worth `%d` token.* \n"+
 				"HashcodeDest: `%s` \n"+
-				"Revealing Secret.", myCommitmentPayload.CoinTransfer, myCommitmentPayload.HashcodeDest)
+				"*Revealing Secret...*", myCommitmentPayload.CoinTransfer, myCommitmentPayload.HashcodeDest)
 			err := server.Client.SendTele(existToAddress.ClientId, msg)
 			if err != nil {
 				println("Noti Tele Reveal: ", err.Error())

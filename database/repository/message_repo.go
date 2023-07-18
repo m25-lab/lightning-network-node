@@ -12,6 +12,7 @@ type MessageRepo interface {
 	FindOneById(context.Context, string, string) (*models.Message, error)
 	FindOneByChannelID(context.Context, string, string) (*models.Message, error)
 	FindOneByChannelIDWithAction(context.Context, string, string, string) (*models.Message, error)
+	FindOneByPartnerWithAction(context.Context, string, string, string) (*models.Message, error)
 	FindOneByOriginalID(context.Context, string, string) (*models.Message, error)
 	FindMany(context.Context, string, string) ([]models.Message, error)
 	UpdateTelegramChatId(context.Context, primitive.ObjectID, int) error

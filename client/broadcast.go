@@ -21,28 +21,28 @@ import (
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 )
 
-func (client *Client) BuildAndBroadcastCommitment(clientId string, commitmentId string) error {
+func (client *Client) BuildAndBroadcastCommitment(clientId string, commitmentId string) (*uint64, error) {
 	ctx, cc := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cc()
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	commitMesssage, err := client.Node.Repository.Message.FindOneById(ctx, fromAccount.AccAddress().String(), commitmentId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	payload := models.CreateCommitmentData{}
 	err = json.Unmarshal([]byte(commitMesssage.Data), &payload)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), commitMesssage.Users[1])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
 	//broadcast
@@ -66,21 +66,21 @@ func (client *Client) BuildAndBroadcastCommitment(clientId string, commitmentId 
 	_, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
 	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, payload.OwnSignature, payload.PartnerSignature, signCommitmentMsg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	broadcastResponse, err := client.ClientCtx.BroadcastTx(txByte)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	if broadcastResponse.RawLog != "[]" {
-		return errors.New(broadcastResponse.RawLog)
+		return nil, errors.New(broadcastResponse.RawLog)
 	}
 	log.Println("\n broadcast commitment response: ", broadcastResponse)
 	//update isReplied
 	commitMesssage.IsReplied = true
 	err = client.Node.Repository.Message.Update(context.Background(), commitMesssage.ID, commitMesssage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// rpc to partner
@@ -92,12 +92,12 @@ func (client *Client) BuildAndBroadcastCommitment(clientId string, commitmentId 
 		Index:    fmt.Sprintf("%s:%s", payload.Creator, payload.Hashcode),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if response.ErrorCode != "" {
-		return errors.New(response.Response)
+		return nil, errors.New(response.Response)
 	}
-	return nil
+	return &payload.Timelock, nil
 }
 
 func (client1 *Client) BuildMultisigMsgReadyForBroadcast(client *Client, multiSigPubkey cryptoTypes.PubKey, sig1, sig2 string, msgRequest channel.SignMsgRequest) ([]byte, error) {

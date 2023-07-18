@@ -27,8 +27,10 @@ type AccountPacked struct {
 }
 
 type LnTransferRes struct {
-	ChannelID    string
-	CommitmentID string
+	ChannelID      string
+	CommitmentID   string
+	OwnBalance     int64
+	PartnerBalance int64
 }
 
 func (client *Client) LnTransfer(
@@ -160,10 +162,18 @@ func (client *Client) LnTransfer(
 			return nil, err
 		}
 	}
+	if hashcodeDest != nil {
+		msg := fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s` \n "+
+			"Your balance: `%d` \n Partner balance: `%d` \n"+
+			"CommitmentID: `%s`", amount, to, fromAmount, toAmount, savedMesssage.ID.Hex())
+		client.SendTele(clientId, msg)
+	}
 
 	return &LnTransferRes{
-		ChannelID:    multisigAddr + ":token:1",
-		CommitmentID: savedMesssage.ID.Hex(),
+		ChannelID:      multisigAddr + ":token:1",
+		CommitmentID:   savedMesssage.ID.Hex(),
+		OwnBalance:     fromAmount,
+		PartnerBalance: toAmount,
 	}, nil
 }
 

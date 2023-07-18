@@ -194,11 +194,8 @@ func (client *Client) RunTelegramBot() error {
 					if balance.Broadcasted {
 						state = "*BROADCASTED* \n"
 					}
-					msg.Text = fmt.Sprintf("%sChannel ID: `%s` \n Your balance: `%d` \n Partner balance: `%d`", state, update.Message.CommandArguments(), balance.MyBalance, balance.PartnerBalance)
+					msg.Text = fmt.Sprintf("%sYour balance: `%d` \n Partner balance: `%d`", state, balance.MyBalance, balance.PartnerBalance)
 				}
-				//multi := "cosmos1elrn44f7v3x27hphy4ll0uxz6md4e4dfkg8s4t:token:1"
-				//msg.Text = fmt.Sprintf("Channel ID: `%s` \n Your balance: `%d` \n Partner balance: `%d`", balance.ChannelId, balance.MyBalance, balance.PartnerBalance)
-
 			case "transfer":
 				params := strings.Split(update.Message.CommandArguments(), " ")
 				amount, err := strconv.ParseInt(params[1], 10, 64)
@@ -211,7 +208,6 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
 				}
-				//msg.Text = fmt.Sprintf("💸 *Transfer successfully.* \n Transfer `%d` token to `%s`", 2, "cosmos1l6xvkdgpfl23nnjhhk99fm3q8f0z49xtj5n5lt")
 			case "ln_transfer":
 				params := strings.Split(update.Message.CommandArguments(), " ")
 				amount, err := strconv.ParseInt(params[1], 10, 64)
@@ -223,8 +219,8 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = "Error: " + err.Error()
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s` \n "+
-						"ChannelID: `%s` \n "+
-						"CommitmentID: `%s`", amount, params[0], res.ChannelID, res.CommitmentID)
+						"Your balance: `%d` \n Partner balance: `%d` \n"+
+						"CommitmentID: `%s`", amount, params[0], res.OwnBalance, res.PartnerBalance, res.CommitmentID)
 				}
 			case "ln_transfer_multi":
 				params := strings.Split(update.Message.CommandArguments(), " ")
@@ -244,11 +240,11 @@ func (client *Client) RunTelegramBot() error {
 				}
 			case "broadcast":
 				params := strings.Split(update.Message.CommandArguments(), " ")
-				err := client.BuildAndBroadcastCommitment(clientId, params[0])
+				timelock, err := client.BuildAndBroadcastCommitment(clientId, params[0])
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \nYour timelock: `%d` block(s)", params[0], 100)
+					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \nYour timelock: `%d` block(s)", params[0], timelock)
 				}
 			case "withdraw_timelock":
 				params := strings.Split(update.Message.CommandArguments(), " ")

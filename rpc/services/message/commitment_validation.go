@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -114,6 +115,11 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 			ErrorCode: "1006",
 		}, nil
 	}
+	oldBalance, err := server.GetChannelBalance(ctx, toAccount.AccAddress().String(), multisigAddr)
+	if err != nil {
+		println("GetChannelBalance: ", err.Error())
+	}
+
 	messageId := primitive.NewObjectID()
 	err = server.Node.Repository.Message.InsertOne(context.Background(), &models.Message{
 		ID:         messageId,
@@ -183,9 +189,10 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 			ErrorCode: "1006",
 		}, nil
 	}
+	amount := myCommitmentPayload.CoinToHtlc - oldBalance
 	telMsg := tgbotapi.NewMessage(clientIdS, "")
 	telMsg.ParseMode = "Markdown"
-	telMsg.Text = fmt.Sprintf("*Balance Update* \n Channel ID: `%s` \n Partner: `%s` \n Your balance: `%d` \n Partner balance: `%d` \n Commitment ID: `%s`", myCommitmentPayload.ChannelID, req.From, myCommitmentPayload.CoinToHtlc, myCommitmentPayload.CoinToCreator, messageId.Hex())
+	telMsg.Text = fmt.Sprintf("*🔔 Channel balance update* \n Received: `%d` token. \n Partner: `%s` \n Your balance: `%d` \n Partner balance: `%d` \n Commitment ID: `%s`", amount, req.From, myCommitmentPayload.CoinToHtlc, myCommitmentPayload.CoinToCreator, messageId.Hex())
 	_, err = server.Client.Bot.Send(telMsg)
 	if err != nil {
 		return &pb.SendMessageResponse{
@@ -197,4 +204,30 @@ func (server *MessageServer) ValidateExchangeCommitment(ctx context.Context, req
 		Response:  string(partnerCommitmentPayload),
 		ErrorCode: "",
 	}, nil
+}
+
+func (server *MessageServer) GetChannelBalance(ctx context.Context, owner string, multisignAddress string) (int64, error) {
+	latestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		owner,
+		fmt.Sprint(multisignAddress+":token:1"),
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return 0, nil
+		} else {
+			return 0, err
+		}
+	}
+	if latestCommitment.IsReplied {
+		return 0, nil
+	}
+
+	payload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(latestCommitment.Data), &payload)
+	if err != nil {
+		return 0, err
+	}
+	return payload.CoinToHtlc, nil
 }

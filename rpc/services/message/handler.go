@@ -198,7 +198,7 @@ func (server *MessageServer) BroadcastNoti(ctx context.Context, req *pb.Broadcas
 	//CURRENT
 	if secretRes.PartnerSecret == "" {
 
-		telMsg.Text = fmt.Sprintf("* Partner broadcasted a CURRENT commitment* \n Channel ID: `%s` \n Partner: `%s` \n Please check your balance.", channelID, req.From)
+		telMsg.Text = fmt.Sprintf("* Partner broadcasted a CURRENT commitment* \n Partner: `%s` \n Please check your balance.", req.From)
 		_, err = server.Client.Bot.Send(telMsg)
 		if err != nil {
 			return &pb.BroadcastNotiResponse{
@@ -223,7 +223,7 @@ func (server *MessageServer) BroadcastNoti(ctx context.Context, req *pb.Broadcas
 	}
 	//OLD
 	// Neu cu~/ Build & broacast withdrawHashlock + thong bao len Tele
-	telMsg.Text = fmt.Sprintf("* Partner broadcasted an OLD commitment* \n Channel ID: `%s` \n Partner: `%s` \n Please check your balance. \n Withdrawing Hashlock...", channelID, req.From)
+	telMsg.Text = fmt.Sprintf("* Partner broadcasted an OLD commitment* \n Partner: `%s` \n Please check your balance. \n *Withdrawing Hashlock...*", req.From)
 	_, err = server.Client.Bot.Send(telMsg)
 	if err != nil {
 		return &pb.BroadcastNotiResponse{

@@ -314,16 +314,16 @@ func (client *Client) Balance(address string) (int64, error) {
 	return bankRes.Balance.Amount.Int64(), nil
 }
 
-func (client *Client) ChannelBalance(clientId string, channelID string) (*ChannelBalanceStruct, error) {
+func (client *Client) ChannelBalance(clientId string, partner string) (*ChannelBalanceStruct, error) {
 	currentAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
 		return nil, nil
 	}
 
-	lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+	lastestCommitment, err := client.Node.Repository.Message.FindOneByPartnerWithAction(
 		context.Background(),
 		currentAccount.AccAddress().String(),
-		channelID,
+		partner,
 		models.ExchangeCommitment,
 	)
 	if err != nil {
@@ -338,7 +338,7 @@ func (client *Client) ChannelBalance(clientId string, channelID string) (*Channe
 
 	return &ChannelBalanceStruct{
 		Broadcasted:    lastestCommitment.IsReplied,
-		ChannelId:      channelID,
+		ChannelId:      lastestCommitment.ChannelID,
 		MyBalance:      payload.CoinToHtlc,
 		PartnerBalance: payload.CoinToCreator,
 	}, nil

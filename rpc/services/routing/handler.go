@@ -257,9 +257,9 @@ func (server *RoutingServer) RREP(ctx context.Context, req *pb.RREPRequest) (*pb
 				msg := tgbotapi.NewMessage(clientId, "")
 				msg.ParseMode = "Markdown"
 				if skipInsert {
-					msg.Text = fmt.Sprintf("✅ *Update new route for `%s` successfully. Will you start lightning transfer multi hops ?*\n", req.BroadcastID)
+					msg.Text = fmt.Sprintf("✅ Update new route for `%s` successfully with `%s`. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
 				} else {
-					msg.Text = fmt.Sprintf("✅ *Find route for `%s` successfully. Will you start lightning transfer multi hops ?*\n", req.BroadcastID)
+					msg.Text = fmt.Sprintf("✅ Find route for `%s` successfully with `%s`. Will you start lightning transfer multi hops ?\n", req.BroadcastID, rrepData.HopCounter+1)
 				}
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(

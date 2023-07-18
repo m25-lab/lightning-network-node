@@ -579,41 +579,40 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 
 	fmt.Println("destAddr ", destAddr)
 	activeAddress, err := server.Node.Repository.Address.FindByAddress(ctx, destAddr) //check coi A co trong db minh khong
+	if err == mongo.ErrNoDocuments || (err == nil && req.To != req.Dest) {
+		//minh khong co A hoac co A nhung minh khong phai A
+		go func() {
+			nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, req.Dest, req.Hashcode)
+			if err != nil {
+				println("nextEntry_FindByDestAndBroadcastId", err.Error())
+			}
+			nextEndpoint := strings.Split(nextEntry.NextHop, "@")[1]
+			rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(nextEndpoint))
+			response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
+				From:     req.To,
+				To:       nextEntry.NextHop,
+				Hashcode: req.Hashcode,
+				Secret:   req.Secret,
+				Dest:     nextEntry.DestinationAddress,
+			})
+			if err != nil {
+				println("ProcessInvoiceSecret", err.Error())
+			}
+			if response.ErrorCode != pb.RoutingErrorCode_OK {
+				//thangcq: bao Tele
+				println("ProcessInvoiceSecret_Inside: ", response.ErrorCode)
+			}
+		}()
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_OK,
+		}, nil
+	}
 	if err != nil {
 		log.Println("FindByAddress...")
-		if err == mongo.ErrNoDocuments {
-			//minh khong co A
-			go func() {
-				nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, req.Dest, req.Hashcode)
-				if err != nil {
-					println("nextEntry_FindByDestAndBroadcastId", err.Error())
-				}
-				nextEndpoint := strings.Split(nextEntry.NextHop, "@")[1]
-				rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(nextEndpoint))
-				response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
-					From:     req.To,
-					To:       nextEntry.NextHop,
-					Hashcode: req.Hashcode,
-					Secret:   req.Secret,
-					Dest:     nextEntry.DestinationAddress,
-				})
-				if err != nil {
-					println("ProcessInvoiceSecret", err.Error())
-				}
-				if response.ErrorCode != pb.RoutingErrorCode_OK {
-					//thangcq: bao Tele
-					println("ProcessInvoiceSecret_Inside: ", response.ErrorCode)
-				}
-			}()
-			return &pb.RoutingBaseResponse{
-				ErrorCode: pb.RoutingErrorCode_OK,
-			}, nil
-		} else {
-			log.Println("FindByAddress...ABC")
-			return &pb.RoutingBaseResponse{
-				ErrorCode: pb.RoutingErrorCode_DESTINATION_ADDRESS_FIND_BY_ADDRESS,
-			}, nil
-		}
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_DESTINATION_ADDRESS_FIND_BY_ADDRESS,
+		}, nil
+
 	}
 	// is dest -> phase commitment
 	go func() {

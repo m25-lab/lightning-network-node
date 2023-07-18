@@ -93,6 +93,7 @@ func (client *Client) RunTelegramBot() error {
 
 	for update := range updates {
 		flagUpdateTelmsg := false
+		flagSkipReturnTelMsg := false
 		var message *models.Message
 		var msg tgbotapi.MessageConfig
 
@@ -232,7 +233,11 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = "Error: " + err.Error()
 				}
 				err = client.LnTransferMulti(clientId, params[0], amount, nil, false, 0)
-				if err != nil && err.Error() != "routing..." {
+				if err.Error() == "routing..." {
+					flagSkipReturnTelMsg = true
+				}
+
+				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
@@ -260,6 +265,11 @@ func (client *Client) RunTelegramBot() error {
 		} else {
 			continue
 		}
+
+		if flagSkipReturnTelMsg {
+			continue
+		}
+
 		msg.ParseMode = "Markdown"
 		telMsg, err := client.Bot.Send(msg)
 		if err != nil {

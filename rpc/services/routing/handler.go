@@ -136,7 +136,9 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 		}
 
 		// log.Println("neighborNodes ", neighborNodes)
+		hasBroadcast := false
 		for _, neighborNode := range neighborNodes {
+
 			neighborNodeAddress := neighborNode.PartnerAddress
 			if neighborNodeAddress == req.SourceAddress {
 				continue
@@ -153,7 +155,13 @@ func (server *RoutingServer) RREQ(ctx context.Context, req *pb.RREQRequest) (*pb
 			if a.CoinToHtlc > rreqData.Amount {
 				forwardRREQRequest.ToAddress = neighborNodeAddress
 				go server.ForwardRREQ(neighborNodeAddress, &forwardRREQRequest)
+				hasBroadcast = true
 			}
+		}
+		if !hasBroadcast {
+			return &pb.RoutingBaseResponse{
+				ErrorCode: pb.RoutingErrorCode_NOT_EXIST_NEIGHBOR_SATISFY,
+			}, nil
 		}
 	}
 

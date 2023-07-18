@@ -552,6 +552,13 @@ func BuildRERRFromRREP(rrep *pb.RREPRequest, msg string) (rerr *pb.RERRRequest) 
 
 func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.InvoiceSecretMessage) (*pb.RoutingBaseResponse, error) {
 	log.Println("ProcessInvoiceSecret...run")
+	existToAddress, err := server.Node.Repository.Address.FindByAddress(ctx, strings.Split(req.To, "@")[0])
+	if err != nil {
+		log.Println("FindByAddress... : existToAddress")
+		return &pb.RoutingBaseResponse{
+			ErrorCode: pb.RoutingErrorCode_VALIDATE_INVOICE_SECRET,
+		}, err
+	}
 	//check hash
 	receiverCommit, err := server.ValidateInvoiceSecret(ctx, req)
 	if err != nil {
@@ -582,6 +589,14 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	if err == mongo.ErrNoDocuments || (err == nil && req.To != req.Dest) {
 		//minh khong co A hoac co A nhung minh khong phai A
 		go func() {
+			time.Sleep(1 * time.Second)
+			msg := fmt.Sprintf("*Received Invoice Secret* \n"+
+				"HashcodeDest: `%s`\n"+
+				"Forwarding...", req.Hashcode)
+			err := server.Client.SendTele(existToAddress.ClientId, msg)
+			if err != nil {
+				println("Noti Tele: ", err.Error())
+			}
 			nextEntry, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, req.Dest, req.Hashcode)
 			if err != nil {
 				println("nextEntry_FindByDestAndBroadcastId", err.Error())
@@ -616,9 +631,16 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 	}
 	// is dest -> phase commitment
 	go func() {
+		time.Sleep(1 * time.Second)
+		msg := fmt.Sprintf("*Received Invoice Secret* \n"+
+			"HashcodeDest: `%s`\n"+
+			"Trading Commitment...", req.Hashcode)
+		err := server.Client.SendTele(existToAddress.ClientId, msg)
+		if err != nil {
+			println("Noti Tele: ", err.Error())
+		}
 		invoice, err := server.Node.Repository.Invoice.FindByHashFrom(context.Background(), req.To, req.Hashcode)
 		if err != nil {
-			//thangcq: in Tele
 			fmt.Println("req.To", req.To)
 			fmt.Println("req.Hashcode", req.Hashcode)
 			println("is dest - commitment :", err.Error())
@@ -631,12 +653,6 @@ func (server *RoutingServer) ProcessInvoiceSecret(ctx context.Context, req *pb.I
 			println("Unmarshal receiverCommitData")
 		}
 		amount := receiverCommitData.CoinTransfer
-		// nexthop, err := server.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), req.To, invoice.To, invoice.Hash)
-		// if err != nil {
-		// 	println("FindRouting", err.Error())
-		// 	return
-		// }
-		// dest := nexthop.NextHop
 
 		_, err = server.Client.LnTransfer(activeAddress.ClientId, receiverCommit.From, amount, &invoice.To, &receiverCommit.HashcodeDest)
 		if err != nil {
@@ -852,8 +868,12 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		}
 	}
 	if needNext {
-		//is middle hop
-		//find next hop and reuse
+		msg := fmt.Sprintf("*Received and Forwarding FWD Commit worth `%d` token.* \n"+
+			"HashcodeDest: `%s`", myCommitmentPayload.CoinTransfer, myCommitmentPayload.HashcodeDest)
+		err := server.Client.SendTele(existToAddress.ClientId, msg)
+		if err != nil {
+			println("Noti Tele Fwd: ", err.Error())
+		}
 		go func() {
 			log.Println("a")
 			time.Sleep(time.Second * 2)
@@ -867,9 +887,14 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		//is Dest
 		//to phase reveal C's secret, call processInvoiceSecret to B
 		go func() {
-			log.Println("c")
 			time.Sleep(time.Second * 2)
-			log.Println("d")
+			msg := fmt.Sprintf("*Received FWD Commit worth `%d` token.* \n"+
+				"HashcodeDest: `%s` \n"+
+				"Revealing Secret.", myCommitmentPayload.CoinTransfer, myCommitmentPayload.HashcodeDest)
+			err := server.Client.SendTele(existToAddress.ClientId, msg)
+			if err != nil {
+				println("Noti Tele Reveal: ", err.Error())
+			}
 			fromSplit := strings.Split(req.From, "@")
 			rpcClient := pb.NewRoutingServiceClient(server.Client.CreateConn(fromSplit[1]))
 			response, err := rpcClient.ProcessInvoiceSecret(context.Background(), &pb.InvoiceSecretMessage{
@@ -886,7 +911,6 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			} else {
 				if response.ErrorCode != pb.RoutingErrorCode_OK {
 					println("start ProcessInvoiceSecret: ", response.ErrorCode)
-					//thangcq: in ra Tele?
 				}
 			}
 		}()

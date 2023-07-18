@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -363,4 +364,18 @@ func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*m
 	}
 
 	return invoice, nil
+}
+
+func (client *Client) SendTele(clientID string, data string) error {
+	clientIdS, err := strconv.ParseInt(clientID, 10, 64)
+	if err != nil {
+		return err
+	}
+	msg := tgbotapi.NewMessage(clientIdS, data)
+	msg.ParseMode = "Markdown"
+	_, err = client.Bot.Send(msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

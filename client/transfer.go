@@ -248,7 +248,12 @@ func (client *Client) LnTransferMulti(
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, *hashcodeDest)
 	if err != nil {
 		go client.StartRouting(*hashcodeDest, amount, selfAddress, to)
-		return fmt.Errorf("Hệ thống đang định tuyến")
+		msg := "Hệ thống đang định tuyến"
+		err := client.SendTele(clientId, msg)
+		if err != nil {
+			log.Println("In nextHop - SendTele :", err.Error())
+		}
+		return fmt.Errorf("routing...")
 	}
 
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")

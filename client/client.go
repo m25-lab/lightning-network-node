@@ -232,7 +232,7 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = "Error: " + err.Error()
 				}
 				err = client.LnTransferMulti(clientId, params[0], amount, nil, false, 0)
-				if err != nil {
+				if err != nil && err.Error() != "routing..." {
 					msg.Text = "Error: " + err.Error()
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])

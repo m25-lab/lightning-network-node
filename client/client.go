@@ -236,7 +236,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", amount, params[0])
+					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Sending FWD Commit of `%d` token to `%s`", amount, params[0])
 				}
 			case "broadcast":
 				params := strings.Split(update.Message.CommandArguments(), " ")

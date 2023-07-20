@@ -337,6 +337,23 @@ func (client *Client) LnTransferMulti(
 	}
 	toAmount = payload.CoinToCreator
 
+	hashcodePayload := models.ExchangeHashcodeData{}
+	latestHashCode, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		fromAccount.AccAddress().String(),
+		multisigAddr+":token:1",
+		models.ExchangeHashcode,
+	)
+	if err != nil {
+		fmt.Println("FindOneByChannelIDWithAction...", err.Error())
+		return err
+	}
+	err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
+	if err != nil {
+		fmt.Println("Unmarshal", err.Error())
+		return err
+	}
+
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {
@@ -350,6 +367,11 @@ func (client *Client) LnTransferMulti(
 	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {
 		log.Println("ExchangeFwdCommitment...", err.Error())
+		return err
+	}
+	_, err = client.ExchangeSecret(clientId, accountPacked, hashcodePayload)
+	if err != nil {
+		fmt.Println("ExchangeSecret: ", err.Error())
 		return err
 	}
 

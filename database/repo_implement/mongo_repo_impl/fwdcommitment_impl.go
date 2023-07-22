@@ -2,6 +2,7 @@ package mongo_repo_impl
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/m25-lab/lightning-network-node/database/models"
 	repo "github.com/m25-lab/lightning-network-node/database/repository"
@@ -18,6 +19,21 @@ func (mongo *FwdCommitmentRepoImplMongo) InsertFwdMessage(ctx context.Context, s
 		return err
 	}
 	return nil
+}
+
+func (mongo *FwdCommitmentRepoImplMongo) FindOneById(ctx context.Context, owner string, id string) (*models.FwdMessage, error) {
+	message := models.FwdMessage{}
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	response := mongo.Db.Collection(FwdMessage).FindOne(ctx, bson.M{"_id": oid, "to": owner})
+	if err := response.Decode(&message); err != nil {
+		return nil, err
+	}
+
+	return &message, nil
 }
 
 func (mongo *FwdCommitmentRepoImplMongo) FindReceiverCommitByDestHash(ctx context.Context, owner string, hash string) (*models.FwdMessage, error) {

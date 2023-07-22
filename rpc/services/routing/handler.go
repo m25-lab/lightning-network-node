@@ -783,7 +783,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		myCommitmentPayload.CoinTransfer,
 		myCommitmentPayload.HashcodeHTLC,
 		myCommitmentPayload.HashcodeDest,
-		myCommitmentPayload.Hops,
+		myCommitmentPayload.TimelockSender,
 	)
 
 	signSenderCommitmentMsg := channel.SignMsgRequest{
@@ -826,7 +826,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		myCommitmentPayload.CoinTransfer,
 		myCommitmentPayload.HashcodeHTLC,
 		myCommitmentPayload.HashcodeDest,
-		myCommitmentPayload.Hops,
+		myCommitmentPayload.TimelockSender,
 	)
 
 	signReceiverCommitmentMsg := channel.SignMsgRequest{
@@ -888,7 +888,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 			log.Println("a")
 			time.Sleep(time.Second * 2)
 			log.Println("b")
-			err = server.Client.LnTransferMulti(existToAddress.ClientId, req.Dest, myCommitmentPayload.CoinTransfer, &req.HashcodeDest, true, myCommitmentPayload.Hops-1)
+			_, err = server.Client.LnTransferMulti(existToAddress.ClientId, req.Dest, myCommitmentPayload.CoinTransfer, &req.HashcodeDest, true, myCommitmentPayload.Hops-1)
 			if err != nil {
 				println("Trade fwd commitment - LnTransferMulti:", err.Error())
 			}

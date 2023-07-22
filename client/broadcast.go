@@ -100,6 +100,89 @@ func (client *Client) BuildAndBroadcastCommitment(clientId string, commitmentId 
 	return &payload.Timelock, nil
 }
 
+func (client *Client) BuildAndBroadcastFWDCommitment(clientId string, commitmentId string) (*string, error) {
+	ctx, cc := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cc()
+	fromAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	commitMesssage, err := client.Node.Repository.FwdCommitment.FindOneById(ctx, fromAccount.AccAddress().String()+"@"+client.Node.Config.LNode.External, commitmentId)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := models.ReceiverCommitment{}
+	err = json.Unmarshal([]byte(commitMesssage.Data), &payload)
+	if err != nil {
+		return nil, err
+	}
+
+	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), commitMesssage.From)
+	if err != nil {
+		return nil, err
+	}
+	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
+	//broadcast
+	channelClient := channel.NewChannel(*client.ClientCtx)
+	commitmentMsg := channelClient.CreateReceiverCommitmentMsg(
+		payload.Multisig,
+		payload.From,
+		payload.CoinToReceiver,
+		payload.CoinToHTLC,
+		payload.CoinTransfer,
+		payload.HashcodeHTLC,
+		payload.HashcodeDest,
+		payload.TimelockSender,
+	)
+	log.Println(commitmentMsg)
+
+	signCommitmentMsg := channel.SignMsgRequest{
+		Msg:      commitmentMsg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+	//log.Println(signCommitmentMsg)
+	_, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
+	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, commitMesssage.OwnSig, commitMesssage.PartnerSig, signCommitmentMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	broadcastResponse, err := client.ClientCtx.BroadcastTx(txByte)
+	if err != nil {
+		return nil, err
+	}
+
+	if broadcastResponse.RawLog != "[]" {
+		return nil, errors.New(broadcastResponse.RawLog)
+	}
+	log.Println("\n broadcast commitment response: ", broadcastResponse)
+	////update isReplied
+	//commitMesssage.IsReplied = true
+	//err = client.Node.Repository.Message.Update(context.Background(), commitMesssage.ID, commitMesssage)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	// rpc to partner
+	//rpcClient := pb.NewMessageServiceClient(client.CreateConn(strings.Split(existedWhitelist.PartnerAddress, "@")[1]))
+	//response, err := rpcClient.BroadcastNoti(context.Background(), &pb.BroadcastNotiMessage{
+	//	From:     fromAccount.AccAddress().String(),
+	//	To:       existedWhitelist.PartnerAddress,
+	//	HashCode: payload.Hashcode,
+	//	Index:    fmt.Sprintf("%s:%s", payload.Creator, payload.Hashcode),
+	//})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if response.ErrorCode != "" {
+	//	return nil, errors.New(response.Response)
+	//}
+	return &payload.TimelockSender, nil
+}
+
 func (client1 *Client) BuildMultisigMsgReadyForBroadcast(client *Client, multiSigPubkey cryptoTypes.PubKey, sig1, sig2 string, msgRequest channel.SignMsgRequest) ([]byte, error) {
 	log.Println("sig1: ", sig1)
 	log.Println("sig2: ", sig2)
@@ -132,13 +215,13 @@ func (client1 *Client) BuildMultisigMsgReadyForBroadcast(client *Client, multiSi
 	if err != nil {
 		return nil, err
 	}
-	log.Println("txJson: ", txJson)
+	//log.Println("txJson: ", txJson)
 
 	txByte, err := common.TxBuilderJsonDecoder(client.ClientCtx.TxConfig, txJson)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("txByte: ", txByte)
+	//log.Println("txByte: ", txByte)
 	return txByte, nil
 }
 
@@ -179,6 +262,44 @@ func (client *Client) BuildAndBroadcastWithdrawTimelock(clientId string, commitm
 	return err
 }
 
+func (client *Client) BuildAndBroadcastSenderWithdrawTimelock(clientId string, commitmentId string) error {
+	ctx, cc := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cc()
+
+	fromAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return err
+	}
+
+	commitMesssage, err := client.Node.Repository.FwdCommitment.FindOneById(ctx, fromAccount.AccAddress().String()+"@"+client.Node.Config.LNode.External, commitmentId)
+	if err != nil {
+		return err
+	}
+
+	payload := models.ReceiverCommitment{}
+	err = json.Unmarshal([]byte(commitMesssage.Data), &payload)
+	if err != nil {
+		return err
+	}
+
+	msg := channelTypes.MsgSenderwithdrawtimelock{
+		Creator:       fromAccount.AccAddress().String(),
+		To:            fromAccount.AccAddress().String(),
+		TransferIndex: fmt.Sprintf("%v:%v:%v", payload.ChannelID, payload.HashcodeDest, "receiver"),
+	}
+	withdrawRequest := channel.SignMsgRequest{
+		Msg:      &msg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+
+	log.Println("BuildAndBroadcastSenderWithdrawTimelock msg: ", msg)
+
+	_, _, err = BroadcastTx(client.ClientCtx, fromAccount, withdrawRequest)
+
+	return err
+}
+
 func BroadcastTx(client *client.Context, account *account.PrivateKeySerialized, request channel.SignMsgRequest) (*sdk.TxResponse, string, error) {
 
 	newTx := common.NewTx(
@@ -203,7 +324,7 @@ func BroadcastTx(client *client.Context, account *account.PrivateKeySerialized, 
 		panic(err)
 	}
 
-	log.Println("Tx rawData", string(txJson))
+	//log.Println("Tx rawData", string(txJson))
 
 	txByte, err := common.TxBuilderJsonDecoder(client.TxConfig, txJson)
 	if err != nil {
@@ -211,7 +332,7 @@ func BroadcastTx(client *client.Context, account *account.PrivateKeySerialized, 
 	}
 
 	txHash := common.TxHash(txByte)
-	log.Println("txHash", txHash)
+	//log.Println("txHash", txHash)
 
 	//log.Println(ethCommon.BytesToHash(txByte).String())
 

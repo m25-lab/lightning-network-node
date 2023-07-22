@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
+	"strconv"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
@@ -13,7 +15,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/database/models"
 )
 
-func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, transferAmount int64, fwdDest string, hashcodeDest *string, hops int64) (*models.Message, error) {
+func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *AccountPacked, fromAmount int64, toAmount int64, transferAmount int64, fwdDest string, hashcodeDest *string, hops int64) (*primitive.ObjectID, error) {
 	log.Println("ExchangeFwdCommitment... run")
 	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(accountPacked.fromAccount.PublicKey(), accountPacked.toAccount.PublicKey(), 2)
 
@@ -35,6 +37,12 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 	}
 
 	//create l1 sender commitment
+	blockheight, err := client.ClientCtx.Client.Status(context.Background())
+	if err != nil {
+		println("BlockHeight-Status: ", err.Error())
+	}
+	senderLock := strconv.FormatInt(blockheight.SyncInfo.LatestBlockHeight+1000*(hops-1), 10)
+
 	channelClient := channel.NewChannel(*client.ClientCtx)
 	senderCommitmentMsg := channelClient.CreateSenderCommitmentMsg(
 		multisigAddr,
@@ -44,7 +52,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		transferAmount,
 		exchangeHashcodeData.PartnerHashcode,
 		*hashcodeDest,
-		hops,
+		senderLock,
 	)
 	//create l1 sign message
 	signCommitmentMsg := channel.SignMsgRequest{
@@ -74,6 +82,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		TimelockReceiver: senderCommitmentMsg.TimelockReceiver,
 		Multisig:         senderCommitmentMsg.Multisig,
 		Hops:             hops,
+		TimelockSender:   senderCommitmentMsg.TimelockSender,
 	}
 
 	partnerCommitmentPayload, err := json.Marshal(msg)
@@ -115,7 +124,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		myCommitmentPayload.CoinTransfer,
 		myCommitmentPayload.HashcodeHTLC,
 		myCommitmentPayload.HashcodeDest,
-		hops,
+		myCommitmentPayload.TimelockSender,
 	)
 
 	signReceiverCommitmentMsg := channel.SignMsgRequest{
@@ -129,8 +138,9 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		log.Println("SignMultisigTxFromOneAccount...")
 		return nil, err
 	}
-
+	messageId := primitive.NewObjectID()
 	err = client.Node.Repository.FwdCommitment.InsertFwdMessage(context.Background(), &models.FwdMessage{
+		ID:           messageId,
 		Action:       models.ReceiverCommit,
 		PartnerSig:   response.PartnerSig,
 		OwnSig:       strSigReceiver,
@@ -144,5 +154,5 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		return nil, err
 	}
 
-	return nil, nil
+	return &messageId, nil
 }

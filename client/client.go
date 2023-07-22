@@ -110,11 +110,11 @@ func (client *Client) RunTelegramBot() error {
 			switch action {
 			case models.StartLnTransferMultiHop:
 				var err error
-				res, err := client.ReLnTransferMulti(clientId, messageId)
+				res, fwdId, err := client.ReLnTransferMulti(clientId, messageId)
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Transfer successfully.* \n Transfer `%d` to `%s`", res.Amount, res.To)
+					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Sending FWD Commit of `%d` token to `%s` \n FWDCommit ID: `%s`", res.Amount, res.To, fwdId)
 				}
 				break
 			case models.AcceptAddWhitelist:
@@ -228,7 +228,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				}
-				err = client.LnTransferMulti(clientId, params[0], amount, nil, false, 0)
+				fwdId, err := client.LnTransferMulti(clientId, params[0], amount, nil, false, 0)
 				if err.Error() == "routing..." {
 					flagSkipReturnTelMsg = true
 				}
@@ -236,7 +236,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Sending FWD Commit of `%d` token to `%s`", amount, params[0])
+					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Forwarding FWDCommit of `%d` token to `%s` \n FWDCommit ID: `%s`", amount, params[0], fwdId.Hex())
 				}
 			case "broadcast":
 				params := strings.Split(update.Message.CommandArguments(), " ")
@@ -244,7 +244,15 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \nYour timelock: `%d` block(s)", params[0], timelock)
+					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \n Your timelock: `%d` block(s)", params[0], &timelock)
+				}
+			case "broadcast_fwd":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				timelock, err := client.BuildAndBroadcastFWDCommitment(clientId, params[0])
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Broadcast FWDCommitment successfully.* \n Commitment ID: `%s` \n CSV timelock: `%s` block(s) \n CLTV timelock: `%s`", params[0], "100", *timelock)
 				}
 			case "withdraw_timelock":
 				params := strings.Split(update.Message.CommandArguments(), " ")
@@ -253,6 +261,15 @@ func (client *Client) RunTelegramBot() error {
 					msg.Text = "Error: " + err.Error()
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Broadcast Withdraw-Timelock Message successfully.* \n" +
+						"Please check your balance.")
+				}
+			case "senderwithdraw_timelock":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				err := client.BuildAndBroadcastSenderWithdrawTimelock(clientId, params[0])
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Broadcast SenderWithdraw-Timelock Message successfully.* \n" +
 						"Please check your balance.")
 				}
 			default:

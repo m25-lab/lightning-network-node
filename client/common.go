@@ -344,26 +344,26 @@ func (client *Client) ChannelBalance(clientId string, partner string) (*ChannelB
 	}, nil
 }
 
-func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*models.InvoiceData, error) {
+func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*models.InvoiceData, *primitive.ObjectID, error) {
 	// get invoice
 	fromAccount, err := client.CurrentAccount(clientID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
 
 	invoice, err := client.Node.Repository.Invoice.FindByHashFrom(context.Background(), selfAddress, invoiceHash)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// start ln transfer multi hop again
-	err = client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoiceHash, true, 0)
+	fwdId, err := client.LnTransferMulti(clientID, invoice.To, invoice.Amount, &invoiceHash, true, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return invoice, nil
+	return invoice, fwdId, nil
 }
 
 func (client *Client) SendTele(clientID string, data string) error {

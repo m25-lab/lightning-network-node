@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"math/big"
 	"strconv"
@@ -229,11 +230,11 @@ func (client *Client) LnTransferMulti(
 	hashcodeDest *string,
 	isSkipGetInvoice bool,
 	hops int64,
-) error {
+) (*primitive.ObjectID, error) {
 	//request invoice
 	fromAccount, err := client.CurrentAccount(clientId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	selfAddress := fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External
 
@@ -241,7 +242,7 @@ func (client *Client) LnTransferMulti(
 	if !isSkipGetInvoice {
 		invoiceResponse, err = client.GetInvoice(fromAccount, amount, to)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		hashcodeDest = &invoiceResponse.Hash
 	}
@@ -251,26 +252,26 @@ func (client *Client) LnTransferMulti(
 	log.Println("selfAddress", selfAddress)
 	log.Println("to", to)
 	if hashcodeDest == nil {
-		return fmt.Errorf("Nil")
+		return nil, fmt.Errorf("Nil")
 	} else {
 		log.Println("hash ", *hashcodeDest)
 	}
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, *hashcodeDest)
 	if err != nil {
 		go client.StartRouting(*hashcodeDest, amount, selfAddress, to)
-		msg := "Hệ thống đang định tuyến"
+		msg := "Finding path..."
 		err := client.SendTele(clientId, msg)
 		if err != nil {
 			log.Println("In nextHop - SendTele :", err.Error())
 		}
-		return fmt.Errorf("routing...")
+		return nil, fmt.Errorf("routing...")
 	}
 
 	nextHopSplit := strings.Split(nextHop.NextHop, "@")
 	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), nextHop.NextHop)
 	if err != nil {
 		log.Println("FindOneByPartnerAddress...")
-		return err
+		return nil, err
 	}
 
 	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
@@ -288,12 +289,12 @@ func (client *Client) LnTransferMulti(
 	multisigAddrBalance, err := client.Balance(multisigAddr)
 	if err != nil {
 		log.Println("Balance...")
-		return err
+		return nil, err
 	}
 	if multisigAddrBalance < amount {
 		//err = client.Transfer(clientId, multisigAddr, 1)
 		if err != nil {
-			return errors.New("Multisig not enough balance:" + strconv.FormatInt(multisigAddrBalance, 10))
+			return nil, errors.New("Multisig not enough balance:" + strconv.FormatInt(multisigAddrBalance, 10))
 		}
 	}
 
@@ -308,7 +309,7 @@ func (client *Client) LnTransferMulti(
 		},
 	)
 	if err != nil && err.Error() == "rpc error: code = NotFound desc = not found" {
-		return errors.New("missing chanel with: " + nextHop.NextHop)
+		return nil, errors.New("missing chanel with: " + nextHop.NextHop)
 	}
 
 	lastestCommitment, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
@@ -319,25 +320,25 @@ func (client *Client) LnTransferMulti(
 	)
 	if err != nil {
 		log.Println("FindOneByChannelIDWithAction...")
-		return err
+		return nil, err
 	}
 	if lastestCommitment.IsReplied {
-		return errors.New("channel with " + nextHop.NextHop + " broadcasted.")
+		return nil, errors.New("channel with " + nextHop.NextHop + " broadcasted.")
 	}
 	payload := models.CreateCommitmentData{}
 	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
 	if err != nil {
 		log.Println("CreateCommitmentData...")
-		return err
+		return nil, err
 	}
 
 	fromAmount = payload.CoinToHtlc - amount
 	if fromAmount < 0 {
-		return fmt.Errorf("not enough balance in channel")
+		return nil, fmt.Errorf("not enough balance in channel")
 	}
 	toAmount = payload.CoinToCreator
 
-	hashcodePayload := models.ExchangeHashcodeData{}
+	oldHashcodePayload := models.ExchangeHashcodeData{}
 	latestHashCode, err := client.Node.Repository.Message.FindOneByChannelIDWithAction(
 		context.Background(),
 		fromAccount.AccAddress().String(),
@@ -346,36 +347,36 @@ func (client *Client) LnTransferMulti(
 	)
 	if err != nil {
 		fmt.Println("FindOneByChannelIDWithAction...", err.Error())
-		return err
+		return nil, err
 	}
-	err = json.Unmarshal([]byte(latestHashCode.Data), &hashcodePayload)
+	err = json.Unmarshal([]byte(latestHashCode.Data), &oldHashcodePayload)
 	if err != nil {
 		fmt.Println("Unmarshal", err.Error())
-		return err
+		return nil, err
 	}
 
 	//exchange hashcode
 	_, err = client.ExchangeHashcode(clientId, accountPacked)
 	if err != nil {
 		log.Println("ExchangeHashcode...")
-		return err
+		return nil, err
 	}
 
 	if hops == 0 {
 		hops = nextHop.HopCounter
 	}
-	_, err = client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
+	fwdId, err := client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {
 		log.Println("ExchangeFwdCommitment...", err.Error())
-		return err
+		return nil, err
 	}
-	_, err = client.ExchangeSecret(clientId, accountPacked, hashcodePayload)
+	_, err = client.ExchangeSecret(clientId, accountPacked, oldHashcodePayload)
 	if err != nil {
 		fmt.Println("ExchangeSecret: ", err.Error())
-		return err
+		return nil, err
 	}
 
-	return nil
+	return fwdId, nil
 }
 
 func (client *Client) GetInvoice(fromAccount *account.PrivateKeySerialized, amount int64, to string) (*pb.IREPMessage, error) {

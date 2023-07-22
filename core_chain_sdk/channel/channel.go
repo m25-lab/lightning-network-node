@@ -2,9 +2,6 @@ package channel
 
 import (
 	"context"
-	"log"
-	"strconv"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -13,6 +10,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"github.com/pkg/errors"
+	"log"
 )
 
 type Channel struct {
@@ -105,13 +103,8 @@ func (cn *Channel) CreateSenderCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
-	hops int64,
+	senderLock string,
 ) *channelTypes.MsgSendercommit {
-	blockheight, err := cn.rpcClient.Client.Status(context.Background())
-	if err != nil {
-		println("CreateSenderCommitmentMsg: ", err.Error())
-	}
-	senderLock := blockheight.SyncInfo.LatestBlockHeight + 1000*(hops-1)
 	return &channelTypes.MsgSendercommit{
 		Creator:   multisigAddr,
 		From:      fromAddr,
@@ -132,7 +125,7 @@ func (cn *Channel) CreateSenderCommitmentMsg(
 		},
 		HashcodeDest:     hashCodeDest,
 		TimelockReceiver: "100",
-		TimelockSender:   strconv.FormatInt(senderLock, 10),
+		TimelockSender:   senderLock,
 		Multisig:         multisigAddr,
 	}
 }
@@ -145,13 +138,8 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 	coinTransfer int64,
 	hashCode string,
 	hashCodeDest string,
-	hops int64,
+	senderLock string,
 ) *channelTypes.MsgReceivercommit {
-	blockheight, err := cn.rpcClient.Client.Status(context.Background())
-	if err != nil {
-		println("CreateReceiverCommitmentMsg: ", err.Error())
-	}
-	senderLock := blockheight.SyncInfo.LatestBlockHeight + 1000*(hops-1)
 	return &channelTypes.MsgReceivercommit{
 		Creator:   multisigAddr,
 		From:      fromAddr,
@@ -171,7 +159,7 @@ func (cn *Channel) CreateReceiverCommitmentMsg(
 			Amount: types.NewInt(coinTransfer),
 		},
 		HashcodeDest:   hashCodeDest,
-		TimelockSender: strconv.FormatInt(senderLock, 10),
+		TimelockSender: senderLock,
 		Multisig:       multisigAddr,
 	}
 }

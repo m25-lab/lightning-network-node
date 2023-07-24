@@ -363,7 +363,7 @@ func (client *Client) LnTransferMulti(
 	}
 
 	if hops == 0 {
-		hops = nextHop.HopCounter
+		hops = nextHop.HopCounter + 1
 	}
 	fwdId, err := client.ExchangeFwdCommitment(clientId, accountPacked, fromAmount, toAmount, amount, to, hashcodeDest, hops)
 	if err != nil {

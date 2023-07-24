@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/m25-lab/lightning-network-node/client"
+	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/job/worker"
 	"github.com/m25-lab/lightning-network-node/node"
 )
@@ -17,16 +19,24 @@ type Manager struct {
 	JobMap map[string]Job
 }
 
-func New(node *node.LightningNode) (manger *Manager, err error) {
+func New(node *node.LightningNode, client *client.Client) (manger *Manager, err error) {
 	manger = new(Manager)
 	manger.JobMap = make(map[string]Job)
 
-	printWK, err := worker.NewPrintWorker()
+	// printWK, err := worker.NewPrintWorker()
+	// if err != nil {
+	// 	log.Println("NewPrintWorker error: ", err.Error())
+	// 	return
+	// }
+	// manger.JobMap["print"] = Job{worker: printWK, duration: 300}
+
+	checkFindRouteWK, err := worker.NewCheckFindRoute(node.Repository, client)
 	if err != nil {
-		log.Println("NewPrintWorker error: ", err.Error())
+		log.Println("NewCheckFindRoute error: ", err.Error())
 		return
 	}
-	manger.JobMap["print"] = Job{worker: printWK, duration: 300}
+	manger.JobMap[models.CheckFindRouteJobName] = Job{worker: checkFindRouteWK, duration: 10}
+
 	return
 }
 

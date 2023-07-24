@@ -26,6 +26,7 @@ type Repository struct {
 	Invoice          repository.InvoiceRepo
 	ExchangeHashcode repository.ExchangeHashcodeRepo
 	FwdCommitment    repository.FwdCommitmentRepo
+	JobQueue         repository.JobQueueRepo
 }
 
 func New(config *config.Config) (*LightningNode, error) {
@@ -45,6 +46,7 @@ func New(config *config.Config) (*LightningNode, error) {
 		FwdCommitment:    mongo_repo_impl.NewFwdCommitmentRepo(database.Client.Database(config.Database.Dbname)),
 		Invoice:          mongo_repo_impl.NewInvoiceRepo(database.Client.Database(config.Database.Dbname)),
 		FwdSecret:        mongo_repo_impl.NewFwdSecretRepo(database.Client.Database(config.Database.Dbname)),
+		JobQueue:         mongo_repo_impl.NewJobQueueRepo(database.Client.Database(config.Database.Dbname)),
 	}
 
 	node := &LightningNode{

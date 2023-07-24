@@ -8,6 +8,7 @@ import (
 
 	"github.com/m25-lab/lightning-network-node/client"
 	"github.com/m25-lab/lightning-network-node/config"
+	"github.com/m25-lab/lightning-network-node/job"
 	"github.com/m25-lab/lightning-network-node/node"
 	"github.com/m25-lab/lightning-network-node/rpc"
 )
@@ -51,13 +52,13 @@ func main() {
 		wg.Done()
 	}()
 
-	// log.Println("Running jobs...")
-	// manager, err := job.New(node)
-	// checkErr(err)
-	// go func() {
-	// 	manager.Run()
-	// 	wg.Done()
-	// }()
+	log.Println("Running jobs...")
+	manager, err := job.New(node, client)
+	checkErr(err)
+	go func() {
+		manager.Run()
+		wg.Done()
+	}()
 
 	log.Println("Connected to MongoDB!")
 	wg.Wait()

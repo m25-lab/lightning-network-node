@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/m25-lab/lightning-network-node/rpc/pb"
 
@@ -256,8 +257,20 @@ func (client *Client) LnTransferMulti(
 	} else {
 		log.Println("hash ", *hashcodeDest)
 	}
+	now := time.Now()
 	nextHop, err := client.Node.Repository.Routing.FindByDestAndBroadcastId(context.Background(), selfAddress, to, *hashcodeDest)
 	if err != nil {
+		go client.Node.Repository.JobQueue.Publish(&models.JobQueueData{
+			Topic:     models.CheckFindRouteJobName,
+			Owner:     selfAddress,
+			ReadyTime: now.Add(30 * time.Second),
+			Data: models.CheckFindRoute{
+				From:          selfAddress,
+				To:            to,
+				Hash:          invoiceResponse.Hash,
+				StartFindTime: &now,
+			},
+		})
 		go client.StartRouting(*hashcodeDest, amount, selfAddress, to)
 		msg := "Finding path..."
 		err := client.SendTele(clientId, msg)

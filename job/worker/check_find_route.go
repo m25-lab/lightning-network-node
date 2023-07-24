@@ -8,6 +8,7 @@ import (
 	"github.com/m25-lab/lightning-network-node/client"
 	"github.com/m25-lab/lightning-network-node/database/models"
 	"github.com/m25-lab/lightning-network-node/node"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type CheckFindRoute struct {
@@ -25,6 +26,9 @@ func (worker CheckFindRoute) Handler() {
 	ctx := context.Background()
 	jobData, err := worker.Repository.JobQueue.Consume(ctx, models.CheckFindRouteJobName)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return
+		}
 		log.Println(models.CheckFindRouteJobName + " consume failed")
 		return
 	}

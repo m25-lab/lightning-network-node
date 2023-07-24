@@ -14,4 +14,5 @@ const (
 	RoutingEntry       string = "routingEntries"
 	Invoice            string = "invoices"
 	FwdMessage         string = "fwdMessages"
+	JobQueue           string = "job_queue"
 )

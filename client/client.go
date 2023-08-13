@@ -114,7 +114,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Sending FWD Commit of `%d` token to `%s` \n FWDCommit ID: `%s`", res.Amount, res.To, fwdId)
+					msg.Text = fmt.Sprintf("⚡ *Start transfer successfully.* \n Sending FWD Commit of `%d` token to `%s` \n FWDCommit ID: `%s`", res.Amount, res.To, fwdId.Hex())
 				}
 				break
 			case models.AcceptAddWhitelist:
@@ -146,6 +146,9 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("🟢 Current account: `%s`", account.AccAddress().String()+"@"+client.Node.Config.LNode.External)
 				}
+			case "block":
+				res, _ := client.ClientCtx.Client.Status(context.Background())
+				msg.Text = strconv.FormatInt(res.SyncInfo.LatestBlockHeight, 10)
 			case "import_account":
 				account, err := client.ImportAccount(clientId, update.Message.CommandArguments())
 				if err != nil {
@@ -244,7 +247,7 @@ func (client *Client) RunTelegramBot() error {
 				if err != nil {
 					msg.Text = "Error: " + err.Error()
 				} else {
-					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \n Your timelock: `%d` block(s)", params[0], &timelock)
+					msg.Text = fmt.Sprintf("⚡ *Broadcast Commitment successfully.* \n Commitment ID: `%s` \n Your timelock: `%d` block(s)", params[0], *timelock)
 				}
 			case "broadcast_fwd":
 				params := strings.Split(update.Message.CommandArguments(), " ")
@@ -271,6 +274,16 @@ func (client *Client) RunTelegramBot() error {
 				} else {
 					msg.Text = fmt.Sprintf("⚡ *Broadcast SenderWithdraw-Timelock Message successfully.* \n" +
 						"Please check your balance.")
+				}
+			case "close_channel":
+				params := strings.Split(update.Message.CommandArguments(), " ")
+				err := client.CloseChannel(clientId, params[0])
+				if err != nil {
+					msg.Text = "Error: " + err.Error()
+				} else {
+					msg.Text = fmt.Sprintf("⚡ *Close channel request accepted* \n"+
+						"Partner: `%s` \n"+
+						"Please check your balance.", params[0])
 				}
 			default:
 				msg.Text = "I don't know that command"

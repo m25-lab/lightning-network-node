@@ -140,12 +140,12 @@ func (client *Client) BuildAndBroadcastFWDCommitment(clientId string, commitment
 
 	signCommitmentMsg := channel.SignMsgRequest{
 		Msg:      commitmentMsg,
-		GasLimit: 100000,
+		GasLimit: 200000,
 		GasPrice: "0token",
 	}
 	//log.Println(signCommitmentMsg)
 	_, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
-	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, commitMesssage.OwnSig, commitMesssage.PartnerSig, signCommitmentMsg)
+	txByte, err := client.BuildMultisigMsgReadyForBroadcast(client, multiSigPubkey, commitMesssage.PartnerSig, commitMesssage.OwnSig, signCommitmentMsg)
 	if err != nil {
 		return nil, err
 	}

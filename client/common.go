@@ -344,6 +344,36 @@ func (client *Client) ChannelBalance(clientId string, partner string) (*ChannelB
 	}, nil
 }
 
+func (client *Client) NewChannelBalance(clientId string, partner string) (*ChannelBalanceStruct, *models.Message, error) {
+	currentAccount, err := client.CurrentAccount(clientId)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	lastestCommitment, err := client.Node.Repository.Message.FindOneByPartnerWithAction(
+		context.Background(),
+		currentAccount.AccAddress().String(),
+		partner,
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	payload := models.CreateCommitmentData{}
+	err = json.Unmarshal([]byte(lastestCommitment.Data), &payload)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &ChannelBalanceStruct{
+		Broadcasted:    lastestCommitment.IsReplied,
+		ChannelId:      lastestCommitment.ChannelID,
+		MyBalance:      payload.CoinToHtlc,
+		PartnerBalance: payload.CoinToCreator,
+	}, lastestCommitment, nil
+}
+
 func (client *Client) ReLnTransferMulti(clientID string, invoiceHash string) (*models.InvoiceData, *primitive.ObjectID, error) {
 	// get invoice
 	fromAccount, err := client.CurrentAccount(clientID)

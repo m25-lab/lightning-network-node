@@ -126,6 +126,7 @@ func (client *Client) ExchangeFwdCommitment(clientId string, accountPacked *Acco
 		myCommitmentPayload.HashcodeDest,
 		myCommitmentPayload.TimelockSender,
 	)
+	log.Println("Sign ReceiverCommit: ", receiverCMsg)
 
 	signReceiverCommitmentMsg := channel.SignMsgRequest{
 		Msg:      receiverCMsg,

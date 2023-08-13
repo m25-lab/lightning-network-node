@@ -802,6 +802,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 	}
 	//Store DB sender commit with 2 sig
 	err = server.Node.Repository.FwdCommitment.InsertFwdMessage(ctx, &models.FwdMessage{
+		ID:           primitive.NewObjectID(),
 		Action:       req.Action, //SenderCommit
 		PartnerSig:   req.Sig,
 		OwnSig:       strSigSender,
@@ -828,6 +829,7 @@ func (server *RoutingServer) ProcessFwdMessage(ctx context.Context, req *pb.FwdM
 		myCommitmentPayload.HashcodeDest,
 		myCommitmentPayload.TimelockSender,
 	)
+	log.Println("Sign Receiver Commit -handler: ", receiverCMsg)
 
 	signReceiverCommitmentMsg := channel.SignMsgRequest{
 		Msg:      receiverCMsg,

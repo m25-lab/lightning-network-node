@@ -3,12 +3,14 @@ package message
 import (
 	"context"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	channelTypes "github.com/m25-lab/channel/x/channel/types"
 	"github.com/m25-lab/lightning-network-node/client"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/common"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 	"strconv"
 	"strings"
 
@@ -259,6 +261,104 @@ func (server *MessageServer) BroadcastNoti(ctx context.Context, req *pb.Broadcas
 	}
 	return &pb.BroadcastNotiResponse{
 		Response:  "",
+		ErrorCode: "",
+	}, nil
+}
+
+func (server *MessageServer) CloseChannel(ctx context.Context, req *pb.CloseChannelMessage) (*pb.CloseChannelResponse, error) {
+	//update broadcasted
+	lastestCommitment, err := server.Node.Repository.Message.FindOneByChannelIDWithAction(
+		context.Background(),
+		strings.Split(req.To, "@")[0],
+		req.ChannelId,
+		models.ExchangeCommitment,
+	)
+	if err != nil {
+		log.Print("get latest commitment failed", err.Error())
+		return &pb.CloseChannelResponse{
+			Response:  "get latest commitment failed",
+			ErrorCode: err.Error(),
+		}, nil
+	}
+	lastestCommitment.IsReplied = true
+	err = server.Node.Repository.Message.Update(context.Background(), lastestCommitment.ID, lastestCommitment)
+	if err != nil {
+		log.Print("update commitment broadcasted failed", err.Error())
+		return &pb.CloseChannelResponse{
+			Response:  "update commitment broadcasted failed",
+			ErrorCode: err.Error(),
+		}, nil
+	}
+	//-----------------
+
+	toAddress := strings.Split(req.To, "@")[0]
+	existToAddress, err := server.Node.Repository.Address.FindByAddress(ctx, toAddress)
+	if err != nil {
+		return &pb.CloseChannelResponse{
+			Response:  err.Error(),
+			ErrorCode: "1005",
+		}, err
+	}
+	toAccount, _ := account.NewAccount().ImportAccount(existToAddress.Mnemonic)
+
+	fromAddressFromDB, err := server.Client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), toAddress, req.From)
+	if err != nil {
+		return &pb.CloseChannelResponse{
+			Response:  err.Error(),
+			ErrorCode: "1004",
+		}, err
+	}
+	fromAccount := account.NewPKAccount(fromAddressFromDB.PartnerPubkey)
+	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
+	channelClient := channel.NewChannel(*server.Client.ClientCtx)
+	msg := channelTypes.MsgCloseChannel{
+		Creator: multisigAddr,
+		From:    multisigAddr,
+		ToA:     fromAccount.AccAddress().String(),
+		CoinA: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(req.CoinA),
+		},
+		ToB: toAccount.AccAddress().String(),
+		CoinB: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(req.CoinB),
+		},
+		ChannelID: req.ChannelId,
+	}
+
+	signMsg := channel.SignMsgRequest{
+		Msg:      &msg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+
+	ownStrSig, err := channelClient.SignMultisigTxFromOneAccount(signMsg, toAccount, multiSigPubkey, false)
+	if err != nil {
+		log.Print("sign failed", err.Error())
+		return &pb.CloseChannelResponse{
+			Response:  "sign failed",
+			ErrorCode: err.Error(),
+		}, nil
+	}
+
+	txByte, err := server.Client.BuildMultisigMsgReadyForBroadcast(server.Client, multiSigPubkey, ownStrSig, req.Sig, signMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	broadcastResponse, err := server.Client.ClientCtx.BroadcastTx(txByte)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("\n broadcast close channel response: ", broadcastResponse)
+	msgTele := fmt.Sprintf("⚡ *Received Close channel request* \n Broadcasted CloseChannel message.")
+	err = server.Client.SendTele(existToAddress.ClientId, msgTele)
+	if err != nil {
+		log.Println("sendTele: ", err.Error())
+	}
+	return &pb.CloseChannelResponse{
+		Response:  "ok",
 		ErrorCode: "",
 	}, nil
 }

@@ -8,6 +8,7 @@ service MessageService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
   rpc SendSecret(SendSecretMessage) returns (SendSecretResponse);
   rpc BroadcastNoti(BroadcastNotiMessage) returns (BroadcastNotiResponse);
+  rpc CloseChannel(CloseChannelMessage) returns (CloseChannelResponse);
 }
 
 message SendMessageRequest {
@@ -44,6 +45,20 @@ message BroadcastNotiMessage {
 }
 
 message BroadcastNotiResponse {
+  string response = 1;
+  string error_code = 2;
+}
+
+message CloseChannelMessage{
+    string from = 1;
+    string to = 2;
+    string sig = 3;
+    string channel_id = 4;
+    int64 coin_a = 5;
+    int64 coin_b = 6;
+}
+
+message CloseChannelResponse {
   string response = 1;
   string error_code = 2;
 }

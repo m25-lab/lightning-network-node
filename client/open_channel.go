@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/cosmos/cosmos-sdk/types"
+	channelTypes "github.com/m25-lab/channel/x/channel/types"
 	"log"
+	"strings"
 
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/account"
 	"github.com/m25-lab/lightning-network-node/core_chain_sdk/channel"
@@ -127,5 +130,72 @@ func (client *Client) OpenChannel(clientId string, accountPacked *AccountPacked)
 	}
 	log.Println("\n broadcast open channel response: ", broadcastResponse)
 
+	return nil
+}
+
+func (client *Client) CloseChannel(clientId string, partnerAddr string) error {
+	fromAccount, err := client.CurrentAccount(clientId)
+
+	existedWhitelist, err := client.Node.Repository.Whitelist.FindOneByPartnerAddress(context.Background(), fromAccount.AccAddress().String(), partnerAddr)
+	if err != nil {
+		return err
+	}
+	toAccount := account.NewPKAccount(existedWhitelist.PartnerPubkey)
+
+	multisigAddr, multiSigPubkey, _ := account.NewAccount().CreateMulSigAccountFromTwoAccount(fromAccount.PublicKey(), toAccount.PublicKey(), 2)
+	channelId := multisigAddr + ":token:1"
+	balance, latestCommitment, err := client.NewChannelBalance(clientId, partnerAddr)
+	if err != nil {
+		log.Println("Get current balance: ", err.Error())
+		return err
+	}
+	if balance.Broadcasted {
+		return errors.New("channel already closed")
+	}
+	channelClient := channel.NewChannel(*client.ClientCtx)
+	msg := channelTypes.MsgCloseChannel{
+		Creator: multisigAddr,
+		From:    multisigAddr,
+		ToA:     fromAccount.AccAddress().String(),
+		CoinA: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(balance.MyBalance),
+		},
+		ToB: toAccount.AccAddress().String(),
+		CoinB: &types.Coin{
+			Denom:  "token",
+			Amount: types.NewInt(balance.PartnerBalance),
+		},
+		ChannelID: channelId,
+	}
+	signMsg := channel.SignMsgRequest{
+		Msg:      &msg,
+		GasLimit: 100000,
+		GasPrice: "0token",
+	}
+	strSig, err := channelClient.SignMultisigTxFromOneAccount(signMsg, fromAccount, multiSigPubkey, false)
+	if err != nil {
+		return err
+	}
+	rpcClient := pb.NewMessageServiceClient(client.CreateConn(strings.Split(partnerAddr, "@")[1]))
+	response, err := rpcClient.CloseChannel(context.Background(), &pb.CloseChannelMessage{
+		From:      fromAccount.AccAddress().String() + "@" + client.Node.Config.LNode.External,
+		To:        partnerAddr,
+		Sig:       strSig,
+		ChannelId: channelId,
+		CoinA:     balance.MyBalance,
+		CoinB:     balance.PartnerBalance,
+	})
+	if response.Response != "ok" {
+		log.Println("rpc call")
+		return errors.New(response.ErrorCode)
+	}
+	//thangcq: update is replied cho balance.
+	latestCommitment.IsReplied = true
+	err = client.Node.Repository.Message.Update(context.Background(), latestCommitment.ID, latestCommitment)
+	if err != nil {
+		log.Println("update broadcasted: ", err.Error())
+		return err
+	}
 	return nil
 }

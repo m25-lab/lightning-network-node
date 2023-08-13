@@ -47,7 +47,7 @@ type ReceiverCommitment struct {
 }
 
 type FwdMessage struct {
-	ID           primitive.ObjectID `bson:"_id, omitempty" json:"id"`
+	ID           primitive.ObjectID `bson:"_id, omitempty" json:"_id"`
 	Action       string             `bson:"action" json:"action"`
 	PartnerSig   string             `bson:"partner_sig" json:"partner_sig"`
 	OwnSig       string             `bson:"own_sig" json:"own_sig"`

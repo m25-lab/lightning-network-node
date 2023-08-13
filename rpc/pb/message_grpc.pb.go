@@ -21,6 +21,7 @@ type MessageServiceClient interface {
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	SendSecret(ctx context.Context, in *SendSecretMessage, opts ...grpc.CallOption) (*SendSecretResponse, error)
 	BroadcastNoti(ctx context.Context, in *BroadcastNotiMessage, opts ...grpc.CallOption) (*BroadcastNotiResponse, error)
+	CloseChannel(ctx context.Context, in *CloseChannelMessage, opts ...grpc.CallOption) (*CloseChannelResponse, error)
 }
 
 type messageServiceClient struct {
@@ -58,6 +59,15 @@ func (c *messageServiceClient) BroadcastNoti(ctx context.Context, in *BroadcastN
 	return out, nil
 }
 
+func (c *messageServiceClient) CloseChannel(ctx context.Context, in *CloseChannelMessage, opts ...grpc.CallOption) (*CloseChannelResponse, error) {
+	out := new(CloseChannelResponse)
+	err := c.cc.Invoke(ctx, "/channel.MessageService/CloseChannel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessageServiceServer is the server API for MessageService service.
 // All implementations must embed UnimplementedMessageServiceServer
 // for forward compatibility
@@ -65,6 +75,7 @@ type MessageServiceServer interface {
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	SendSecret(context.Context, *SendSecretMessage) (*SendSecretResponse, error)
 	BroadcastNoti(context.Context, *BroadcastNotiMessage) (*BroadcastNotiResponse, error)
+	CloseChannel(context.Context, *CloseChannelMessage) (*CloseChannelResponse, error)
 	mustEmbedUnimplementedMessageServiceServer()
 }
 
@@ -80,6 +91,9 @@ func (UnimplementedMessageServiceServer) SendSecret(context.Context, *SendSecret
 }
 func (UnimplementedMessageServiceServer) BroadcastNoti(context.Context, *BroadcastNotiMessage) (*BroadcastNotiResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BroadcastNoti not implemented")
+}
+func (UnimplementedMessageServiceServer) CloseChannel(context.Context, *CloseChannelMessage) (*CloseChannelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseChannel not implemented")
 }
 func (UnimplementedMessageServiceServer) mustEmbedUnimplementedMessageServiceServer() {}
 
@@ -148,6 +162,24 @@ func _MessageService_BroadcastNoti_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessageService_CloseChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseChannelMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServiceServer).CloseChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/channel.MessageService/CloseChannel",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServiceServer).CloseChannel(ctx, req.(*CloseChannelMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MessageService_ServiceDesc is the grpc.ServiceDesc for MessageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -166,6 +198,10 @@ var MessageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BroadcastNoti",
 			Handler:    _MessageService_BroadcastNoti_Handler,
+		},
+		{
+			MethodName: "CloseChannel",
+			Handler:    _MessageService_CloseChannel_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
